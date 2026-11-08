@@ -1,6 +1,7 @@
 export 'src/color_override.dart';
 export 'src/components/bbos6/bbos6_media_list_tile.dart';
 export 'src/components/bbos6/bbos6_selection_gradient.dart';
+export 'src/components/bbos6/pane_manager.dart';
 export 'src/components/close_button.dart';
 export 'src/components/column_button.dart';
 export 'src/components/email_input.dart';
