@@ -2,7 +2,7 @@
 
 ## User-facing home screen
 
-The authenticated app landing screen is a BBOS6-style **Pictures** menu with seven full-width BB Music-style rows, in exactly this order. In connected Immich mode, the left-aligned title bar displays Immich's existing logo and the title **Immich**:
+The authenticated app landing screen is a BBOS6-style **Pictures** menu with seven full-width BB Music-style rows, in exactly this order. In connected Immich mode, the left-aligned title bar displays Immich's existing logo and the title **immich**:
 
 | Visible label | Existing Immich destination |
 | --- | --- |
@@ -29,7 +29,7 @@ A future user-controlled connectivity mode is proposed: when fully local, the ap
 - Continue honouring Immich read-only mode: Pictures Library and Settings remain usable; destinations that previously lived behind the disabled Library/Albums tabs are disabled.
 - Do not change media providers, authentication, backup, synchronization, route guards, asset data, or timeline/gallery widgets.
 - Keep the original four `AutoTabsRouter` routes internally for existing navigation, deep links and compatibility. This removes *visible* tabs without deleting Immich's navigation plumbing or generated routes.
-- The home title bar is explicitly left-aligned, reuses Immich's existing bundled logo, and reads **Immich**. Row icons remain temporary Flutter Material icons until their BBOS6 counterparts are identified and cleared for reuse.
+- The home title bar is explicitly left-aligned, reuses Immich's existing bundled logo, and reads **immich**. Row icons remain temporary Flutter Material icons until their BBOS6 counterparts are identified and cleared for reuse.
 - No additional Camera or Picture Apps row has been added to this user-approved six-entry home.
 
 ## Code and verification
@@ -41,7 +41,7 @@ A future user-controlled connectivity mode is proposed: when fully local, the ap
 
 ### Manual acceptance checklist (target Android device)
 
-1. After signing in, the first visible page shows an Immich logo and **Immich** title, with the seven menu entries in the approved order.
+1. After signing in, the first visible page shows an Immich logo and **immich** title, with the seven menu entries in the approved order.
 2. There is no bottom tab bar and no left rail on rotation.
 3. Select Pictures Library: the existing Photos timeline displays; Android Back returns to Pictures home.
 4. Select Albums: Immich's existing Albums page displays; Android Back returns to Pictures home.
