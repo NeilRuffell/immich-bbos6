@@ -13,6 +13,12 @@ The pane order and data mapping are:
 | All | `QuickFilterMode.all` |
 | Shared | `QuickFilterMode.sharedWithMe` |
 | My Albums | `QuickFilterMode.myAlbums` |
+| + | Action: pushes the existing `CreateAlbumRoute` |
+
+The compact + action is the rightmost PaneManager item. It opens the existing
+full-screen Create Album page on the app navigator, outside the PaneManager's
+owned sliver content. It does not select a filter, switch the displayed pane,
+or transfer focus into the album list. Closing the page returns to Albums.
 
 No new album data source, screen, filter algorithm or route is introduced.
 Album opening, search, list/grid selection, sorting, creating albums,
@@ -29,11 +35,11 @@ yet; their BBOS6 controls are a later task.
 - Preview: `mobile/packages/ui/lib/src/previews/bbos6_pane_manager.dart`
 - Tests: `mobile/packages/ui/test/pane_manager_test.dart`
 
-The widget receives **pane models** (label and optional icon, including icon-only display), an external **selected index**, and an **onSelected** callback. It does not know what Immich, albums, or their server are.
+The widget receives **pane models** (label and optional icon, including icon-only display), an external **selected index**, and an **onSelected** callback. Pane items may also supply a relative `flex`, `labelFontSize`, and `onActivate` callback. Action items run their callback when activated without changing the selected index or entering pane content. It does not know what Immich, albums, or their server are.
 
 ### BBOS6 appearance and input
 
-- One 52dp-high horizontal bar with three equal-width text segments in Albums. The shared widget also supports icon or icon-and-label panes.
+- One 52dp-high horizontal bar with three equal-width filter segments and a narrower rightmost + action in Albums. The + label is smaller than the regular pane labels. The shared widget also supports icon or icon-and-label panes.
 - Square edges, grayscale inactive background inspired by the BB Music chrome.
 - Selected pane uses the **existing shared BBOS6 selection gradient** rather
   than a duplicate palette.
@@ -96,7 +102,7 @@ established visual and interaction contract through a separate native renderer.
 
 ## Device verification
 
-1. Open **Immich → Albums**: the top selector reads **All | Shared | My Albums**.
+1. Open **Immich → Albums**: the top selector reads **All | Shared | My Albums | +**. The + item is narrower.
 2. Confirm the album list matches the original filters for each selection.
 3. Test Left/Right highlighting without switching lists. Press Up/Down while
    on the pane bar: focus must **not** enter any list or toolbar control.
@@ -108,7 +114,11 @@ established visual and interaction contract through a separate native renderer.
 6. Repeat steps 3–5 with an empty album list, in Grid mode, and after opening
    then closing an individual album.
 7. Scroll a long list: PaneManager stays visible under the page header.
-8. Confirm Search, Grid/List, Sorting, Open Album, Create Album and delete
+8. Focus + with Right; ensure moving the highlight alone does not open a page or
+   change the album filter. Press the trackpad to open the existing full-screen
+   Create Album page, without rendering it below PaneManager. Close that page
+   and verify the original Albums pane and content remain. Repeat with touch.
+9. Confirm Search, Grid/List, Sorting, Open Album, Create Album and delete
    confirmation remain functional. Check portrait and landscape.
 
 Code has been committed to the feature branch. Compilation, widget-test
