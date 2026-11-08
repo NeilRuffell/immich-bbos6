@@ -462,6 +462,9 @@ class _SearchBar extends StatelessWidget {
                 cursorColor: const Color(0xFF24272B),
                 decoration: InputDecoration(
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                   hintText: context.t.search_albums,
