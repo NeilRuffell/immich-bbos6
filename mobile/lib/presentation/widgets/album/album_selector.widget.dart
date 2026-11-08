@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
@@ -92,7 +93,11 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
 
   void changeFilter(QuickFilterMode mode) {
     setState(() {
-      filter = filter.copyWith(mode: mode);
+      filter = filter.copyWith(
+        mode: mode,
+        query: searchController.text,
+        userId: ref.read(currentUserProvider)?.id,
+      );
     });
 
     unawaited(filterAlbums());
@@ -185,18 +190,25 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
       },
       child: MultiSliver(
         children: [
+          // Stay visible above the album list while scrolling, as a BBOS6
+          // pane selector. Existing Immich filtering remains the data source.
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _AlbumPaneHeaderDelegate(
+              child: PaneManager(
+                labels: [context.t.all, 'Shared', context.t.my_albums],
+                selectedIndex: filter.mode.index,
+                onSelected: (index) => changeFilter(QuickFilterMode.values[index]),
+                autofocus: true,
+              ),
+            ),
+          ),
           _SearchBar(
             searchController: searchController,
             searchFocusNode: searchFocusNode,
             onSearch: onSearch,
             filterMode: filter.mode,
             onClearSearch: clearSearch,
-          ),
-          _QuickFilterButtonRow(
-            filterMode: filter.mode,
-            onChangeFilter: changeFilter,
-            onSearch: onSearch,
-            searchController: searchController,
           ),
           _QuickSortAndViewMode(
             isGrid: isGrid,
@@ -424,88 +436,24 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-class _QuickFilterButtonRow extends StatelessWidget {
-  const _QuickFilterButtonRow({
-    required this.filterMode,
-    required this.onChangeFilter,
-    required this.onSearch,
-    required this.searchController,
-  });
+class _AlbumPaneHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _AlbumPaneHeaderDelegate({required this.child});
 
-  final QuickFilterMode filterMode;
-  final void Function(QuickFilterMode) onChangeFilter;
-  final void Function(String, QuickFilterMode) onSearch;
-  final TextEditingController searchController;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverToBoxAdapter(
-        child: Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            _QuickFilterButton(
-              label: context.t.all,
-              isSelected: filterMode == QuickFilterMode.all,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.all);
-                onSearch(searchController.text, QuickFilterMode.all);
-              },
-            ),
-            _QuickFilterButton(
-              label: context.t.shared_with_me,
-              isSelected: filterMode == QuickFilterMode.sharedWithMe,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.sharedWithMe);
-                onSearch(searchController.text, QuickFilterMode.sharedWithMe);
-              },
-            ),
-            _QuickFilterButton(
-              label: context.t.my_albums,
-              isSelected: filterMode == QuickFilterMode.myAlbums,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.myAlbums);
-                onSearch(searchController.text, QuickFilterMode.myAlbums);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickFilterButton extends StatelessWidget {
-  const _QuickFilterButton({required this.isSelected, required this.onTap, required this.label});
-
-  final bool isSelected;
-  final VoidCallback onTap;
-  final String label;
+  double get minExtent => PaneManager.height;
 
   @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.all(isSelected ? context.colorScheme.primary : Colors.transparent),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
-            side: BorderSide(color: context.colorScheme.onSurface.withAlpha(25), width: 1),
-          ),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? context.colorScheme.onPrimary : context.colorScheme.onSurface,
-          fontSize: 14,
-        ),
-      ),
-    );
+  double get maxExtent => PaneManager.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return ColoredBox(color: Colors.black, child: child);
   }
+
+  @override
+  bool shouldRebuild(covariant _AlbumPaneHeaderDelegate oldDelegate) => true;
 }
 
 class _QuickSortAndViewMode extends StatelessWidget {
