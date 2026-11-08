@@ -183,6 +183,8 @@ void main() {
   });
 
   testWidgets('compact action pane activates without selecting a pane or entering content', (tester) async {
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
     var actionCount = 0;
     final selectedIndices = <int>[];
     final contentFocus = FocusNode(debugLabel: 'Album list');
@@ -200,6 +202,7 @@ void main() {
                   const PaneManagerItem(label: 'My Albums', flex: 3),
                   PaneManagerItem(
                     label: '+',
+                    semanticLabel: 'Create Album',
                     flex: 1,
                     labelFontSize: 12,
                     onActivate: () => actionCount++,
@@ -220,6 +223,7 @@ void main() {
     final actionWidth = tester.getSize(find.byKey(const ValueKey('pane-3'))).width;
     expect(actionWidth, lessThan(regularWidth));
     expect(tester.widget<Text>(find.text('+')).style?.fontSize, 12);
+    expect(find.bySemanticsLabel(RegExp('Create Album')), findsOneWidget);
 
     await tester.tap(find.text('+'));
     await tester.pump();
