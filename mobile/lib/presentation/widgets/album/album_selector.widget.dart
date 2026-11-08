@@ -53,21 +53,6 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   final _firstAlbumFocusNode = FocusNode(debugLabel: 'First album in active pane');
   bool _searchVisible = false;
 
-  /// PaneManager owns the selection gesture; Albums owns its content focus.
-  void _focusActiveAlbums(int _) {
-    // Reveal the first item before requesting focus (sliver children are lazy).
-    final scrollable = Scrollable.maybeOf(context);
-    if (scrollable != null && scrollable.position.hasPixels) {
-      scrollable.position.jumpTo(scrollable.position.minScrollExtent);
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _firstAlbumFocusNode.context != null) {
-        _firstAlbumFocusNode.requestFocus();
-      }
-    });
-  }
-
   bool get isSearchVisible => _searchVisible;
   bool get isSearchInputFocused => searchFocusNode.hasFocus;
 
@@ -261,7 +246,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
                 ],
                 selectedIndex: _albumPaneFilters.indexOf(filter.mode),
                 onSelected: (index) => changeFilter(_albumPaneFilters[index]),
-                onActivated: _focusActiveAlbums,
+                contentFocusNode: _firstAlbumFocusNode,
                 autofocus: true,
               ),
             ),
