@@ -105,7 +105,7 @@ void main() {
                     contentFocus.requestFocus();
                   },
                 ),
-                ListTile(focusNode: contentFocus, title: const Text('First album')),
+                TextButton(focusNode: contentFocus, onPressed: () {}, child: const Text('First album')),
               ],
             ),
           ),
