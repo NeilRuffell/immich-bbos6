@@ -157,6 +157,117 @@ void main() {
     expect(contentFocus.hasFocus, isTrue);
   });
 
+  testWidgets('pane and content scopes do not traverse into each other', (tester) async {
+    final controller = PaneManagerController();
+    addTearDown(controller.dispose);
+    final first = FocusNode(debugLabel: 'First list item');
+    final second = FocusNode(debugLabel: 'Second list item');
+    addTearDown(first.dispose);
+    addTearDown(second.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              PaneManager(
+                panes: panes,
+                selectedIndex: 0,
+                controller: controller,
+                contentFocusNode: first,
+                onSelected: (_) {},
+              ),
+              PaneManagerContent(
+                controller: controller,
+                child: Column(
+                  children: [
+                    TextButton(focusNode: first, onPressed: () {}, child: const Text('First item')),
+                    TextButton(focusNode: second, onPressed: () {}, child: const Text('Second item')),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final pane = tester.widget<InkWell>(find.byKey(const ValueKey('pane-0'))).focusNode!;
+    pane.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(pane.hasFocus, isTrue);
+    expect(first.hasFocus, isFalse);
+    expect(controller.isInContent, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(first.hasFocus, isTrue);
+    expect(controller.isInContent, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(first.hasFocus, isTrue); // Cannot cross into pane manager.
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(second.hasFocus, isTrue); // Normal list navigation still works.
+
+    expect(controller.returnToPanes(), isTrue);
+    await tester.pump();
+    expect(pane.hasFocus, isTrue);
+    expect(controller.isInContent, isFalse);
+    expect(controller.returnToPanes(), isFalse); // Second Back belongs to page.
+  });
+
+  testWidgets('Back focuses the selected pane, not a merely highlighted pane', (tester) async {
+    final controller = PaneManagerController();
+    addTearDown(controller.dispose);
+    final first = FocusNode();
+    addTearDown(first.dispose);
+    var selected = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            body: Column(
+              children: [
+                PaneManager(
+                  panes: panes,
+                  selectedIndex: selected,
+                  contentFocusNode: first,
+                  controller: controller,
+                  onSelected: (index) => setState(() => selected = index),
+                ),
+                PaneManagerContent(
+                  controller: controller,
+                  child: TextButton(focusNode: first, onPressed: () {}, child: const Text('Album')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    tester.widget<InkWell>(find.byKey(const ValueKey('pane-0'))).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(selected, 0);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(selected, 1);
+    expect(first.hasFocus, isTrue);
+
+    expect(controller.returnToPanes(), isTrue);
+    await tester.pump();
+    expect(tester.widget<InkWell>(find.byKey(const ValueKey('pane-1'))).focusNode!.hasFocus, isTrue);
+    expect(controller.returnToPanes(), isFalse);
+  });
+
   testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
     final semantics = tester.ensureSemantics();
     addTearDown(semantics.dispose);
