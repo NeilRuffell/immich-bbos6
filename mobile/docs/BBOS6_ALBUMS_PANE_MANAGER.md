@@ -65,12 +65,16 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   anything. This prevents focus from remaining on the pane bar until the next
   trackpad movement. The helper's `BBOS6-PaneManager` focus trace is guarded
   by `kDebugMode` and is inactive in profile and release APKs.
-- PaneManagerContent has a **debug-only** `BBOS6-PaneScroll` trace for
-  investigating focus-based scrolling. It records content focus changes, the
-  nearest containing Scrollable's pixel offset, and the focused render box's
-  position relative to the viewport. These are observations only: no
-  `ensureVisible`, scrolling or traversal behavior is modified. The observer
-  is absent from profile/release widget trees (`kDebugMode` guard).
+- PaneManagerContent synchronizes **upward** keyboard/trackpad focus with
+  its containing Scrollable when a row moves above the visible area. It uses
+  `ScrollPosition.ensureVisible` and the shared pane bar's actual position to
+  keep the focused row below pinned chrome. Downward scrolling and the strict
+  pane/content focus boundaries remain unchanged; the behavior is shared
+  across all PaneManager consumers, never hardcoded for Albums.
+- A **debug-only** `BBOS6-PaneScroll` trace records content focus changes,
+  scroll offsets, target visibility, and upward corrections. The diagnostic
+  observer is absent from profile/release builds (`kDebugMode` guard), while
+  the functional upward focus scrolling works in every build.
 - The shared implementation handles Android Back **only** through the
   Router's BackButtonDispatcher (via BackButtonListener). Do not also move focus
   on the physical Back key event inside PaneManagerContent: one physical press
