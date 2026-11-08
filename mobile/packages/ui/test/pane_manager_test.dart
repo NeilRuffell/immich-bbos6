@@ -4,7 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 import 'package:immich_ui/src/components/bbos6/pane_manager.dart';
 
-const labels = ['All', 'Shared', 'My Albums'];
+const panes = [
+  PaneManagerItem(label: 'All'),
+  PaneManagerItem(label: 'Shared'),
+  PaneManagerItem(label: 'My Albums'),
+];
 
 void main() {
   testWidgets('PaneManager has three equal, square panes and uses the shared selection gradient', (tester) async {
@@ -12,14 +16,14 @@ void main() {
       MaterialApp(
         theme: ThemeData.light(),
         home: Scaffold(
-          body: PaneManager(labels: labels, selectedIndex: 0, onSelected: (_) {}),
+          body: PaneManager(panes: panes, selectedIndex: 0, onSelected: (_) {}),
         ),
       ),
     );
 
     expect(tester.getSize(find.byType(PaneManager)).height, PaneManager.height);
-    for (final label in labels) {
-      expect(find.text(label), findsOneWidget);
+    for (final pane in panes) {
+      expect(find.text(pane.label), findsOneWidget);
     }
 
     final selected = find.descendant(
@@ -44,7 +48,7 @@ void main() {
         home: StatefulBuilder(
           builder: (context, setState) => Scaffold(
             body: PaneManager(
-              labels: labels,
+              panes: panes,
               selectedIndex: selected,
               onSelected: (index) {
                 changes.add(index);
@@ -79,7 +83,7 @@ void main() {
         home: StatefulBuilder(
           builder: (context, setState) => Scaffold(
             body: PaneManager(
-              labels: labels,
+              panes: panes,
               selectedIndex: selected,
               onSelected: (index) {
                 changes.add(index);
@@ -117,6 +121,28 @@ void main() {
     expect(changes, [1, 2, 1]);
   });
 
+  testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PaneManager(
+            panes: const [
+              PaneManagerItem(label: 'Camera', icon: Icon(Icons.camera_alt_outlined), showLabel: false),
+              PaneManagerItem(label: 'Gallery', icon: Icon(Icons.photo_library_outlined), showLabel: false),
+            ],
+            selectedIndex: 0,
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.camera_alt_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+    expect(find.text('Camera'), findsNothing);
+    expect(find.bySemanticsLabel('Camera'), findsOneWidget);
+  });
+
   testWidgets('unfocused PaneManager does not consume arrows from another control', (tester) async {
     final textNode = FocusNode();
     addTearDown(textNode.dispose);
@@ -127,7 +153,7 @@ void main() {
         home: Scaffold(
           body: Column(
             children: [
-              PaneManager(labels: labels, selectedIndex: 0, onSelected: changes.add),
+              PaneManager(panes: panes, selectedIndex: 0, onSelected: changes.add),
               TextField(focusNode: textNode),
             ],
           ),
