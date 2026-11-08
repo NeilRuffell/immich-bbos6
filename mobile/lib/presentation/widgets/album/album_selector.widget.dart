@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +24,6 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/album_filter.utils.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
-import 'package:immich_mobile/widgets/common/search_field.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 typedef AlbumSelectorCallback = void Function(RemoteAlbum album);
@@ -44,14 +42,48 @@ class AlbumSelector extends ConsumerStatefulWidget {
   const AlbumSelector({super.key, required this.onAlbumSelected, this.onKeyboardExpanded});
 
   @override
-  ConsumerState<AlbumSelector> createState() => _AlbumSelectorState();
+  ConsumerState<AlbumSelector> createState() => AlbumSelectorState();
 }
 
-class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
+class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   bool isGrid = false;
   final searchController = TextEditingController();
   final menuController = MenuController();
   final searchFocusNode = FocusNode();
+  bool _searchVisible = false;
+
+  bool get isSearchVisible => _searchVisible;
+  bool get isSearchInputFocused => searchFocusNode.hasFocus;
+
+  /// Reveals the existing search input after a physical key is typed.
+  /// The controller's existing listeners still perform filtering.
+  void beginSearchWith(String characters) {
+    if (characters.isEmpty) {
+      return;
+    }
+    if (!_searchVisible) {
+      setState(() => _searchVisible = true);
+    }
+    final text = searchController.text + characters;
+    searchController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _searchVisible) {
+        searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void dismissSearch() {
+    if (!_searchVisible) {
+      return;
+    }
+    searchFocusNode.unfocus();
+    clearSearch();
+    setState(() => _searchVisible = false);
+  }
   List<RemoteAlbum> sortedAlbums = [];
   List<RemoteAlbum> shownAlbums = [];
 
@@ -215,12 +247,12 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
               ),
             ),
           ),
-          _SearchBar(
+          if (_searchVisible) _SearchBar(
             searchController: searchController,
             searchFocusNode: searchFocusNode,
             onSearch: onSearch,
             filterMode: filter.mode,
-            onClearSearch: clearSearch,
+            onClearSearch: dismissSearch,
           ),
           _QuickSortAndViewMode(
             isGrid: isGrid,
@@ -411,37 +443,38 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withValues(alpha: 0.075),
-                context.colorScheme.primary.withValues(alpha: 0.09),
-                context.colorScheme.primary.withValues(alpha: 0.075),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              transform: const GradientRotation(0.5 * pi),
+    return SliverToBoxAdapter(
+      child: Bbos6SearchBar(
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: Color(0xFF6B7074), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                focusNode: searchFocusNode,
+                onChanged: (text) => onSearch(text, filterMode),
+                onTapOutside: (_) => searchFocusNode.unfocus(),
+                textInputAction: TextInputAction.search,
+                style: const TextStyle(color: Color(0xFF24272B), fontSize: 16),
+                cursorColor: const Color(0xFF24272B),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: context.t.search_albums,
+                  hintStyle: const TextStyle(color: Color(0xFFB6B7BB)),
+                ),
+              ),
             ),
-          ),
-          child: SearchField(
-            autofocus: false,
-            contentPadding: const EdgeInsets.all(16),
-            hintText: context.t.search_albums,
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: searchController.text.isNotEmpty
-                ? IconButton(icon: const Icon(Icons.clear_rounded), onPressed: onClearSearch)
-                : null,
-            controller: searchController,
-            onChanged: (_) => onSearch(searchController.text, filterMode),
-            focusNode: searchFocusNode,
-            onTapOutside: (_) => searchFocusNode.unfocus(),
-          ),
+            IconButton(
+              tooltip: context.t.cancel,
+              icon: const Icon(Icons.close, color: Color(0xFF4E555B), size: 20),
+              onPressed: onClearSearch,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          ],
         ),
       ),
     );
