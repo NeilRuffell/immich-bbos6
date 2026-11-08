@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
-import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
-import 'package:immich_mobile/pages/common/large_leading_tile.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 
+/// Album presentation in the existing Immich Albums list.
+///
+/// This keeps the existing asset-thumbnail provider and selection callback;
+/// only the layout is replaced by the shared BBOS6 list row.
 class AlbumTile extends ConsumerWidget {
   const AlbumTile({super.key, required this.album, required this.isOwner, this.onAlbumSelected});
 
@@ -19,47 +21,29 @@ class AlbumTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final albumThumbnailAsset = ref.watch(assetServiceProvider).getRemoteAsset(album.thumbnailAssetId ?? "");
 
-    return LargeLeadingTile(
-      title: Text(
-        album.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        '${context.t.items_count(count: album.assetCount)} • ${isOwner ? context.t.owned : context.t.shared_by_user(user: album.ownerName)}',
-        overflow: TextOverflow.ellipsis,
-        style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
-      ),
+    return Bbos6MediaListTile(
+      title: album.name,
+      subtitle:
+          '${context.t.items_count(count: album.assetCount)} • ${isOwner ? context.t.owned : context.t.shared_by_user(user: album.ownerName)}',
       onTap: () => onAlbumSelected?.call(album),
-      leadingPadding: const EdgeInsets.only(right: 16),
       leading: FutureBuilder(
         future: albumThumbnailAsset,
         builder: (context, snapshot) {
-          return snapshot.hasData && snapshot.data != null
-              ? ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  child: SizedBox(
-                    width: 80,
-                    height: 80,
+          return SizedBox(
+            width: 52,
+            height: 52,
+            child: snapshot.hasData && snapshot.data != null
+                ? ClipRect(
                     child: Thumbnail.remote(
                       remoteId: album.thumbnailAssetId!,
                       thumbhash: snapshot.data!.thumbHash ?? "",
                     ),
+                  )
+                : const ColoredBox(
+                    color: Color(0xFF292C31),
+                    child: Icon(Icons.photo_album_rounded, size: 26, color: Color(0xFFB6B7BB)),
                   ),
-                )
-              : SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.surfaceContainer,
-                      borderRadius: const BorderRadius.all(Radius.circular(16)),
-                      border: Border.all(color: context.colorScheme.outline.withAlpha(50), width: 1),
-                    ),
-                    child: const Icon(Icons.photo_album_rounded, size: 24, color: Colors.grey),
-                  ),
-                );
+          );
         },
       ),
     );
