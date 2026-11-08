@@ -242,9 +242,15 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
             delegate: _AlbumPaneHeaderDelegate(
               child: PaneManager(
                 panes: [
-                  PaneManagerItem(label: context.t.all),
-                  const PaneManagerItem(label: 'Shared'),
-                  PaneManagerItem(label: context.t.my_albums),
+                  PaneManagerItem(label: context.t.all, flex: 3),
+                  const PaneManagerItem(label: 'Shared', flex: 3),
+                  PaneManagerItem(label: context.t.my_albums, flex: 3),
+                  PaneManagerItem(
+                    label: '+',
+                    flex: 1,
+                    labelFontSize: 12,
+                    onActivate: () => unawaited(context.pushRoute(const CreateAlbumRoute())),
+                  ),
                 ],
                 selectedIndex: _albumPaneFilters.indexOf(filter.mode),
                 onSelected: (index) => changeFilter(_albumPaneFilters[index]),
