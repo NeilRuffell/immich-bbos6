@@ -51,6 +51,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   final menuController = MenuController();
   final searchFocusNode = FocusNode();
   final _firstAlbumFocusNode = FocusNode(debugLabel: 'First album in active pane');
+  final _paneNavigation = PaneManagerController();
   bool _searchVisible = false;
 
   bool get isSearchVisible => _searchVisible;
@@ -214,6 +215,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
     searchController.dispose();
     searchFocusNode.dispose();
     _firstAlbumFocusNode.dispose();
+    _paneNavigation.dispose();
     super.dispose();
   }
 
@@ -247,39 +249,49 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
                 selectedIndex: _albumPaneFilters.indexOf(filter.mode),
                 onSelected: (index) => changeFilter(_albumPaneFilters[index]),
                 contentFocusNode: _firstAlbumFocusNode,
+                controller: _paneNavigation,
                 autofocus: true,
               ),
             ),
           ),
-          if (_searchVisible)
-            _SearchBar(
-              searchController: searchController,
-              searchFocusNode: searchFocusNode,
-              onSearch: onSearch,
-              filterMode: filter.mode,
-              onClearSearch: dismissSearch,
-            ),
-          _QuickSortAndViewMode(
-            isGrid: isGrid,
-            onToggleViewMode: toggleViewMode,
-            onSortChanged: changeSort,
-            controller: menuController,
-            currentSortMode: sort.mode,
-            currentIsReverse: sort.isReverse,
-          ),
-          isGrid
-              ? _AlbumGrid(
-                  albums: shownAlbums,
-                  userId: userId,
-                  onAlbumSelected: widget.onAlbumSelected,
-                  firstItemFocusNode: _firstAlbumFocusNode,
-                )
-              : _AlbumList(
-                  albums: shownAlbums,
-                  userId: userId,
-                  onAlbumSelected: widget.onAlbumSelected,
-                  firstItemFocusNode: _firstAlbumFocusNode,
+          // The content region is its own stopped FocusScope. Directional keys
+          // cannot traverse between PaneManager and its list or grid.
+          PaneManagerContent(
+            controller: _paneNavigation,
+            child: MultiSliver(
+              children: [
+                if (_searchVisible)
+                  _SearchBar(
+                    searchController: searchController,
+                    searchFocusNode: searchFocusNode,
+                    onSearch: onSearch,
+                    filterMode: filter.mode,
+                    onClearSearch: dismissSearch,
+                  ),
+                _QuickSortAndViewMode(
+                  isGrid: isGrid,
+                  onToggleViewMode: toggleViewMode,
+                  onSortChanged: changeSort,
+                  controller: menuController,
+                  currentSortMode: sort.mode,
+                  currentIsReverse: sort.isReverse,
                 ),
+                isGrid
+                    ? _AlbumGrid(
+                        albums: shownAlbums,
+                        userId: userId,
+                        onAlbumSelected: widget.onAlbumSelected,
+                        firstItemFocusNode: _firstAlbumFocusNode,
+                      )
+                    : _AlbumList(
+                        albums: shownAlbums,
+                        userId: userId,
+                        onAlbumSelected: widget.onAlbumSelected,
+                        firstItemFocusNode: _firstAlbumFocusNode,
+                      ),
+              ],
+            ),
+          ),
         ],
       ),
     );
