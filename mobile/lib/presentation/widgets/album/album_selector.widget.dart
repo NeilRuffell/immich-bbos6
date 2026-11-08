@@ -80,7 +80,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
     if (!_searchVisible) {
       return;
     }
-    searchFocusNode.unfocus();
+    searchFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
     clearSearch();
     setState(() => _searchVisible = false);
   }
@@ -456,7 +456,9 @@ class _SearchBar extends StatelessWidget {
                 controller: searchController,
                 focusNode: searchFocusNode,
                 onChanged: (text) => onSearch(text, filterMode),
-                onTapOutside: (_) => searchFocusNode.unfocus(),
+                onTapOutside: (_) => searchFocusNode.unfocus(
+                  disposition: UnfocusDisposition.previouslyFocusedChild,
+                ),
                 textInputAction: TextInputAction.search,
                 style: const TextStyle(color: Color(0xFF24272B), fontSize: 16),
                 cursorColor: const Color(0xFF24272B),
