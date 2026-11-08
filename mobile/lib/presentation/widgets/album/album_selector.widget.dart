@@ -50,6 +50,8 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   final searchController = TextEditingController();
   final menuController = MenuController();
   final searchFocusNode = FocusNode();
+  final _firstAlbumFocusNode = FocusNode(debugLabel: 'First album in active pane');
+  final _paneNavigation = PaneManagerController();
   bool _searchVisible = false;
 
   bool get isSearchVisible => _searchVisible;
@@ -212,6 +214,8 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   void dispose() {
     searchController.dispose();
     searchFocusNode.dispose();
+    _firstAlbumFocusNode.dispose();
+    _paneNavigation.dispose();
     super.dispose();
   }
 
@@ -244,29 +248,50 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
                 ],
                 selectedIndex: _albumPaneFilters.indexOf(filter.mode),
                 onSelected: (index) => changeFilter(_albumPaneFilters[index]),
+                contentFocusNode: _firstAlbumFocusNode,
+                controller: _paneNavigation,
                 autofocus: true,
               ),
             ),
           ),
-          if (_searchVisible)
-            _SearchBar(
-              searchController: searchController,
-              searchFocusNode: searchFocusNode,
-              onSearch: onSearch,
-              filterMode: filter.mode,
-              onClearSearch: dismissSearch,
+          // The content region is its own stopped FocusScope. Directional keys
+          // cannot traverse between PaneManager and its list or grid.
+          PaneManagerContent(
+            controller: _paneNavigation,
+            child: MultiSliver(
+              children: [
+                if (_searchVisible)
+                  _SearchBar(
+                    searchController: searchController,
+                    searchFocusNode: searchFocusNode,
+                    onSearch: onSearch,
+                    filterMode: filter.mode,
+                    onClearSearch: dismissSearch,
+                  ),
+                _QuickSortAndViewMode(
+                  isGrid: isGrid,
+                  onToggleViewMode: toggleViewMode,
+                  onSortChanged: changeSort,
+                  controller: menuController,
+                  currentSortMode: sort.mode,
+                  currentIsReverse: sort.isReverse,
+                ),
+                isGrid
+                    ? _AlbumGrid(
+                        albums: shownAlbums,
+                        userId: userId,
+                        onAlbumSelected: widget.onAlbumSelected,
+                        firstItemFocusNode: _firstAlbumFocusNode,
+                      )
+                    : _AlbumList(
+                        albums: shownAlbums,
+                        userId: userId,
+                        onAlbumSelected: widget.onAlbumSelected,
+                        firstItemFocusNode: _firstAlbumFocusNode,
+                      ),
+              ],
             ),
-          _QuickSortAndViewMode(
-            isGrid: isGrid,
-            onToggleViewMode: toggleViewMode,
-            onSortChanged: changeSort,
-            controller: menuController,
-            currentSortMode: sort.mode,
-            currentIsReverse: sort.isReverse,
           ),
-          isGrid
-              ? _AlbumGrid(albums: shownAlbums, userId: userId, onAlbumSelected: widget.onAlbumSelected)
-              : _AlbumList(albums: shownAlbums, userId: userId, onAlbumSelected: widget.onAlbumSelected),
         ],
       ),
     );
@@ -555,18 +580,27 @@ class _QuickSortAndViewMode extends StatelessWidget {
 }
 
 class _AlbumList extends ConsumerWidget {
-  const _AlbumList({required this.albums, required this.userId, required this.onAlbumSelected});
+  const _AlbumList({
+    required this.albums,
+    required this.userId,
+    required this.onAlbumSelected,
+    required this.firstItemFocusNode,
+  });
 
   final List<RemoteAlbum> albums;
   final String? userId;
   final AlbumSelectorCallback onAlbumSelected;
+  final FocusNode firstItemFocusNode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (albums.isEmpty) {
       return SliverToBoxAdapter(
-        child: Center(
-          child: Padding(padding: const EdgeInsets.all(20.0), child: Text(context.t.album_search_not_found)),
+        child: Focus(
+          focusNode: firstItemFocusNode,
+          child: Center(
+            child: Padding(padding: const EdgeInsets.all(20.0), child: Text(context.t.album_search_not_found)),
+          ),
         ),
       );
     }
@@ -602,10 +636,20 @@ class _AlbumList extends ConsumerWidget {
                 onDismissed: (direction) async {
                   await ref.read(remoteAlbumProvider.notifier).deleteAlbum(album.id);
                 },
-              child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
+              child: AlbumTile(
+                album: album,
+                isOwner: isOwner,
+                onAlbumSelected: onAlbumSelected,
+                focusNode: index == 0 ? firstItemFocusNode : null,
+              ),
             );
           } else {
-            return AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected);
+            return AlbumTile(
+              album: album,
+              isOwner: isOwner,
+              onAlbumSelected: onAlbumSelected,
+              focusNode: index == 0 ? firstItemFocusNode : null,
+            );
           }
         },
         itemCount: albums.length,
@@ -615,18 +659,27 @@ class _AlbumList extends ConsumerWidget {
 }
 
 class _AlbumGrid extends StatelessWidget {
-  const _AlbumGrid({required this.albums, required this.userId, required this.onAlbumSelected});
+  const _AlbumGrid({
+    required this.albums,
+    required this.userId,
+    required this.onAlbumSelected,
+    required this.firstItemFocusNode,
+  });
 
   final List<RemoteAlbum> albums;
   final String? userId;
   final AlbumSelectorCallback onAlbumSelected;
+  final FocusNode firstItemFocusNode;
 
   @override
   Widget build(BuildContext context) {
     if (albums.isEmpty) {
       return SliverToBoxAdapter(
-        child: Center(
-          child: Padding(padding: const EdgeInsets.all(20.0), child: Text(context.t.album_search_not_found)),
+        child: Focus(
+          focusNode: firstItemFocusNode,
+          child: Center(
+            child: Padding(padding: const EdgeInsets.all(20.0), child: Text(context.t.album_search_not_found)),
+          ),
         ),
       );
     }
@@ -642,7 +695,12 @@ class _AlbumGrid extends StatelessWidget {
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final album = albums[index];
-          return _GridAlbumCard(album: album, userId: userId, onAlbumSelected: onAlbumSelected);
+          return _GridAlbumCard(
+            album: album,
+            userId: userId,
+            onAlbumSelected: onAlbumSelected,
+            focusNode: index == 0 ? firstItemFocusNode : null,
+          );
         }, childCount: albums.length),
       ),
     );
@@ -650,17 +708,19 @@ class _AlbumGrid extends StatelessWidget {
 }
 
 class _GridAlbumCard extends ConsumerWidget {
-  const _GridAlbumCard({required this.album, required this.userId, required this.onAlbumSelected});
+  const _GridAlbumCard({required this.album, required this.userId, required this.onAlbumSelected, this.focusNode});
 
   final RemoteAlbum album;
   final String? userId;
   final AlbumSelectorCallback onAlbumSelected;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final albumThumbnailAsset = ref.watch(assetServiceProvider).getRemoteAsset(album.thumbnailAssetId ?? "");
 
-    return GestureDetector(
+    return InkWell(
+      focusNode: focusNode,
       onTap: () => onAlbumSelected(album),
       child: Card(
         elevation: 0,

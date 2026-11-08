@@ -11,17 +11,19 @@ import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 /// This keeps the existing asset-thumbnail provider and selection callback;
 /// only the layout is replaced by the shared BBOS6 list row.
 class AlbumTile extends ConsumerWidget {
-  const AlbumTile({super.key, required this.album, required this.isOwner, this.onAlbumSelected});
+  const AlbumTile({super.key, required this.album, required this.isOwner, this.onAlbumSelected, this.focusNode});
 
   final RemoteAlbum album;
   final bool isOwner;
   final Function(RemoteAlbum)? onAlbumSelected;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final albumThumbnailAsset = ref.watch(assetServiceProvider).getRemoteAsset(album.thumbnailAssetId ?? "");
 
     return Bbos6MediaListTile(
+      focusNode: focusNode,
       title: album.name,
       subtitle:
           '${context.t.items_count(count: album.assetCount)} • ${isOwner ? context.t.owned : context.t.shared_by_user(user: album.ownerName)}',
