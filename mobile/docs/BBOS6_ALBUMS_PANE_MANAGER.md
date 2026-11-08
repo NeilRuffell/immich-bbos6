@@ -59,9 +59,15 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   and returns to the selected pane without changing its data. Back again is
   passed to the page's existing navigation (Albums returns to Pictures home).
   Inner list/grid directional navigation works normally.
-- The shared implementation uses a Router back dispatcher for Android's
-  system Back event. Keyboard focus boundaries remain active in widget previews
-  without a Router.
+- The shared implementation handles Android Back **only** through the
+  Router's BackButtonDispatcher (via BackButtonListener). Do not also move focus
+  on the physical Back key event inside PaneManagerContent: one physical press
+  can deliver both a keyboard event and a route-pop notification, which would
+  otherwise produce two navigation steps from one press.
+- Keyboard focus boundaries remain active in previews without a Router. The
+  widget regression test simulates a keyboard Back event followed by the
+  Router notification, and verifies one Back returns to the pane bar while a
+  separate second Back reaches page navigation.
 - The bar is pinned via `SliverPersistentHeader` within `MultiSliver`
   (`pushPinnedChildren: true`).
 
