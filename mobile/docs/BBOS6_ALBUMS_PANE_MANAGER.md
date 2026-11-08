@@ -65,14 +65,15 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   anything. This prevents focus from remaining on the pane bar until the next
   trackpad movement. The helper's `BBOS6-PaneManager` focus trace is guarded
   by `kDebugMode` and is inactive in profile and release APKs.
-- PaneManagerContent synchronizes **upward** keyboard/trackpad focus with
-  its containing Scrollable when a row moves above the visible area. It uses
-  `ScrollPosition.ensureVisible` and the shared pane bar's actual position to
-  keep the focused row below pinned chrome. Downward scrolling and the strict
-  pane/content focus boundaries remain unchanged; the behavior is shared
-  across all PaneManager consumers, never hardcoded for Albums.
+- PaneManagerContent matches standalone BBOS6 list edge alignment for
+  keyboard/trackpad focus: a row crossing the **upper** content boundary is
+  aligned directly beneath the pane bar; a row crossing the **lower** viewport
+  boundary is aligned with the viewport bottom. Focus movement among fully
+  visible rows never changes the scroll position. The helper uses the actual
+  pane-bar geometry and `ScrollPosition.ensureVisible`, not Albums-specific
+  offsets. Pane/content focus boundaries and Back behavior are unchanged.
 - A **debug-only** `BBOS6-PaneScroll` trace records content focus changes,
-  scroll offsets, target visibility, and upward corrections. The diagnostic
+  scroll offsets, target visibility, and edge-alignment corrections. The diagnostic
   observer is absent from profile/release builds (`kDebugMode` guard), while
   the functional upward focus scrolling works in every build.
 - The shared implementation handles Android Back **only** through the
