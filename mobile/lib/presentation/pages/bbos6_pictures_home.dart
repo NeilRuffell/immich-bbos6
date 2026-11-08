@@ -14,6 +14,7 @@ class Bbos6PicturesHome extends StatelessWidget {
     required this.onMemories,
     required this.onPlaces,
     required this.onPeople,
+    required this.onSettings,
     this.readonly = false,
     super.key,
   });
@@ -24,6 +25,7 @@ class Bbos6PicturesHome extends StatelessWidget {
   final VoidCallback onMemories;
   final VoidCallback onPlaces;
   final VoidCallback onPeople;
+  final VoidCallback onSettings;
   final bool readonly;
 
   @override
@@ -32,6 +34,8 @@ class Bbos6PicturesHome extends StatelessWidget {
       backgroundColor: Colors.black,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: 12,
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -79,6 +83,11 @@ class Bbos6PicturesHome extends StatelessWidget {
               title: 'People',
               leading: const Icon(Icons.people_outline, size: 26),
               onTap: readonly ? null : onPeople,
+            ),
+            Bbos6MediaListTile(
+              title: 'Settings',
+              leading: const Icon(Icons.settings_outlined, size: 26),
+              onTap: onSettings,
               showDivider: false,
             ),
           ],
