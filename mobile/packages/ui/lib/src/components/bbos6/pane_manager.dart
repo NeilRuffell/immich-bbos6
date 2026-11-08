@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 
+@immutable
+class PaneManagerItem {
+  const PaneManagerItem({required this.label, this.icon});
+
+  final String label;
+  final Widget? icon;
+}
+
 /// A reusable BBOS6-inspired horizontal pane selector.
 ///
 /// [selectedIndex] is controlled by the parent. PaneManager owns only keyboard
@@ -9,17 +17,17 @@ import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 /// between panes when the bar has focus; Enter/Select and touch activate a pane.
 class PaneManager extends StatefulWidget {
   const PaneManager({
-    required this.labels,
+    required this.panes,
     required this.selectedIndex,
     required this.onSelected,
     this.autofocus = false,
     super.key,
-  }) : assert(labels.length > 0),
-       assert(selectedIndex >= 0 && selectedIndex < labels.length);
+  }) : assert(panes.length > 0),
+       assert(selectedIndex >= 0 && selectedIndex < panes.length);
 
   static const double height = 52;
 
-  final List<String> labels;
+  final List<PaneManagerItem> panes;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
   final bool autofocus;
@@ -35,17 +43,17 @@ class _PaneManagerState extends State<PaneManager> {
   @override
   void initState() {
     super.initState();
-    _nodes = List.generate(widget.labels.length, (_) => FocusNode());
+    _nodes = List.generate(widget.panes.length, (_) => FocusNode());
   }
 
   @override
   void didUpdateWidget(PaneManager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.labels.length != widget.labels.length) {
+    if (oldWidget.panes.length != widget.panes.length) {
       for (final node in _nodes) {
         node.dispose();
       }
-      _nodes = List.generate(widget.labels.length, (_) => FocusNode());
+      _nodes = List.generate(widget.panes.length, (_) => FocusNode());
       _focusedIndex = null;
     }
   }
@@ -107,7 +115,7 @@ class _PaneManagerState extends State<PaneManager> {
           onKeyEvent: _onKeyEvent,
           child: Row(
             children: [
-              for (var index = 0; index < widget.labels.length; index++)
+              for (var index = 0; index < widget.panes.length; index++)
                 Expanded(
                   child: Semantics(
                     button: true,
@@ -148,16 +156,32 @@ class _PaneManagerState extends State<PaneManager> {
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Text(
-                              widget.labels[index],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (widget.panes[index].icon != null)
+                                  IconTheme(
+                                    data: const IconThemeData(color: Colors.white, size: 20),
+                                    child: widget.panes[index].icon!,
+                                  ),
+                                if (widget.panes[index].icon != null && widget.panes[index].label.isNotEmpty)
+                                  const SizedBox(width: 5),
+                                if (widget.panes[index].label.isNotEmpty)
+                                  Flexible(
+                                    child: Text(
+                                      widget.panes[index].label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
