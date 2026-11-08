@@ -122,6 +122,8 @@ void main() {
   });
 
   testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
