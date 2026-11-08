@@ -214,7 +214,9 @@ void main() {
     await tester.pump();
     expect(second.hasFocus, isTrue); // Normal list navigation still works.
 
-    expect(controller.returnToPanes(), isTrue);
+    // A Q25 Back key represented as a logical GoBack event is consumed by
+    // the shared content scope, not by the containing page.
+    await tester.sendKeyEvent(LogicalKeyboardKey.goBack);
     await tester.pump();
     expect(pane.hasFocus, isTrue);
     expect(controller.isInContent, isFalse);
