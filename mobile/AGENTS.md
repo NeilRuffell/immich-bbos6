@@ -2,6 +2,16 @@
 
 Flutter app with Riverpod, Drift (SQLite), auto_route, pigeon and a Rust core in `../native/`.
 
+## BBOS6 presentation-only fork policy
+
+Before editing this fork's mobile appearance, read [BBOS6 presentation architecture](docs/BBOS6_PRESENTATION_ARCHITECTURE.md).
+
+- Use the **working BB Music application in `NeilRuffell/bb-ui` branch `master`**, particularly `music-app/app/src/main/java/dev/q25/bbmusic/`, as the primary reference for BlackBerry OS 6 media styling; the `bb-ui` default `main` is not the active reference.
+- Port existing BB Music visual specifications and supported focus semantics into reusable **Flutter** controls. Do not copy Android Java Views, rebuild image/data pipelines or invent redundant BBOS6 components.
+- Keep changes strictly inside the presentation boundary: preserve Immich's service behavior, Riverpod business state, synchronization, backup, permissions, authentication, databases, API, route semantics, and image/playback engine.
+- Prefer shared Flutter controls under `packages/ui/lib/src/components/bbos6/` with tests/previews, then convert screens incrementally. Treat original BBOS6 icon mappings in `bb-ui/assets/bbos6/icon-index.csv` as canonical and review asset redistribution rights before adding images to this fork.
+- Preserve touch, physical-key navigation and accessibility; validate functionality after each visual change.
+
 ## Rules
 
 - Run `mise //mobile:checkout` after switching branches. All generated Dart is git-ignored; never edit it.
