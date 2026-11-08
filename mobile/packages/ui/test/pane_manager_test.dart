@@ -214,13 +214,13 @@ void main() {
     await tester.pump();
     expect(second.hasFocus, isTrue); // Normal list navigation still works.
 
-    // A Q25 Back key represented as a logical GoBack event is consumed by
-    // the shared content scope, not by the containing page.
-    await tester.sendKeyEvent(LogicalKeyboardKey.goBack);
+    // The router's single Back callback returns to the pane. Keyboard
+    // callbacks no longer perform this transition independently.
+    expect(controller.returnToPanes(), isTrue);
     await tester.pump();
     expect(pane.hasFocus, isTrue);
     expect(controller.isInContent, isFalse);
-    expect(controller.returnToPanes(), isFalse); // Second Back belongs to page.
+    expect(controller.returnToPanes(), isFalse); // Next Back belongs to page.
   });
 
   testWidgets('Back focuses the selected pane, not a merely highlighted pane', (tester) async {
@@ -318,7 +318,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(firstAlbum.hasFocus, isTrue);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.goBack);
+    expect(controller.returnToPanes(), isTrue);
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(controller.isInContent, isFalse);
