@@ -619,7 +619,7 @@ class _PaneManagerState extends State<PaneManager> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white,
                                         fontSize: widget.panes[index].labelFontSize,
                                         fontWeight: FontWeight.w500,
