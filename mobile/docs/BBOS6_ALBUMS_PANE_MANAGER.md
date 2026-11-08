@@ -50,8 +50,18 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   first list or grid item (or its empty-state placeholder). Albums provides only
   that node, not a navigation/focus callback.
   Album data, filtering, routing and sort behavior are unchanged.
-- Up/Down is not swallowed: Flutter's standard directional focus navigation is
-  preserved for the other controls and album content.
+- PaneManager now defines **two isolated focus scopes** using the reusable
+  `PaneManagerController` and `PaneManagerContent`. Up/Down on the pane bar
+  cannot enter its content; directional traversal and Tab traversal at content
+  edges cannot jump back into the pane bar.
+- Enter/trackpad click activates the highlighted pane and moves focus to the
+  supplied content target. The first Back is handled by the shared PaneManager
+  and returns to the selected pane without changing its data. Back again is
+  passed to the page's existing navigation (Albums returns to Pictures home).
+  Inner list/grid directional navigation works normally.
+- The shared implementation uses a Router back dispatcher for Android's
+  system Back event. Keyboard focus boundaries remain active in widget previews
+  without a Router.
 - The bar is pinned via `SliverPersistentHeader` within `MultiSliver`
   (`pushPinnedChildren: true`).
 
@@ -65,14 +75,18 @@ established visual and interaction contract through a separate native renderer.
 
 1. Open **Immich → Albums**: the top selector reads **All | Shared | My Albums**.
 2. Confirm the album list matches the original filters for each selection.
-3. Test pressing Left/Right: only the white focus border moves, not the
-   selected blue pane and not the album results. Press the trackpad to commit
-   the highlighted pane; focus should jump into the first album row. Repeat
-   by clicking the current pane and while Grid mode is enabled.
-4. Scroll a long list: the pane bar should remain visible under the page header.
-5. Confirm Search, Grid/List, Sorting, Open Album, Create Album and delete
-   confirmation still work as before.
-6. Verify Back returns to the Pictures home; check portrait and landscape.
+3. Test Left/Right highlighting without switching lists. Press Up/Down while
+   on the pane bar: focus must **not** enter any list or toolbar control.
+4. Press trackpad: the selected pane activates and focus enters its first album
+   row (or the first grid card). Up/Down navigates within that content without
+   escaping back to PaneManager.
+5. Press Back once: focus returns to the **selected pane**, not the previous page.
+   Press Back a second time: Albums returns to Pictures home.
+6. Repeat steps 3–5 with an empty album list, in Grid mode, and after opening
+   then closing an individual album.
+7. Scroll a long list: PaneManager stays visible under the page header.
+8. Confirm Search, Grid/List, Sorting, Open Album, Create Album and delete
+   confirmation remain functional. Check portrait and landscape.
 
 Code has been committed to the feature branch. Compilation, widget-test
 execution and Q25 testing must be run on a machine with Flutter installed.
