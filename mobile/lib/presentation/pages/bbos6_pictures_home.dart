@@ -41,7 +41,7 @@ class Bbos6PicturesHome extends StatelessWidget {
           children: [
             ImmichLogo(size: 28),
             SizedBox(width: 8),
-            Text('Immich'),
+            Text('immich'),
           ],
         ),
         backgroundColor: Colors.black,
