@@ -189,6 +189,7 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
         menuController.close();
       },
       child: MultiSliver(
+        pushPinnedChildren: true,
         children: [
           // Stay visible above the album list while scrolling, as a BBOS6
           // pane selector. Existing Immich filtering remains the data source.
