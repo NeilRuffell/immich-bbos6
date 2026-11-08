@@ -49,7 +49,7 @@ class _PinnedPaneTestHeader extends SliverPersistentHeaderDelegate {
 }
 
 void main() {
-  testWidgets('upward focus traversal scrolls a pane-owned SliverList above a pinned header', (tester) async {
+  testWidgets('pane-owned SliverList aligns focus to top/bottom edges and holds position inside', (tester) async {
     final controller = PaneManagerController();
     final scrollController = ScrollController();
     final rows = List.generate(20, (index) => FocusNode(debugLabel: 'Item $index'));
@@ -119,8 +119,38 @@ void main() {
     expect(rows[2].hasPrimaryFocus, isTrue);
     expect(scrollController.offset, lessThan(initialOffset));
     final paneBottom = tester.getBottomLeft(find.byType(PaneManager)).dy;
-    final focusedTop = tester.getTopLeft(find.text('Item 2')).dy;
-    expect(focusedTop, greaterThanOrEqualTo(paneBottom - 1));
+    double focusedTop(FocusNode node) {
+      final box = node.context!.findRenderObject()! as RenderBox;
+      return box.localToGlobal(Offset.zero).dy;
+    }
+
+    double focusedBottom(FocusNode node) {
+      final box = node.context!.findRenderObject()! as RenderBox;
+      return box.localToGlobal(Offset.zero).dy + box.size.height;
+    }
+
+    expect(focusedTop(rows[2]), closeTo(paneBottom, 1.0));
+
+    // Focus moves inside the visible area without moving the scroll offset.
+    final afterUp = scrollController.offset;
+    rows[3].requestFocus();
+    await tester.pump();
+    expect(scrollController.offset, closeTo(afterUp, 0.5));
+
+    // Crossing the bottom edge aligns the focused row with the viewport bottom.
+    expect(rows[8].context, isNotNull);
+    rows[8].requestFocus();
+    await tester.pump();
+    expect(scrollController.offset, greaterThan(afterUp));
+    final viewportBottom = tester.getBottomLeft(find.byType(CustomScrollView)).dy;
+    expect(focusedBottom(rows[8]), closeTo(viewportBottom, 1.0));
+
+    // Backtracking to a fully visible row must not produce extra scrolling.
+    final afterDown = scrollController.offset;
+    rows[7].requestFocus();
+    await tester.pump();
+    expect(scrollController.offset, closeTo(afterDown, 0.5));
+
     expect(tester.takeException(), isNull);
   });
 
