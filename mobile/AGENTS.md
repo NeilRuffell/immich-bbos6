@@ -12,6 +12,7 @@ Before editing this fork's mobile appearance, read [BBOS6 presentation architect
 - Prefer shared Flutter controls under `packages/ui/lib/src/components/bbos6/` with tests/previews, then convert screens incrementally. Treat original BBOS6 icon mappings in `bb-ui/assets/bbos6/icon-index.csv` as canonical and review asset redistribution rights before adding images to this fork.
 - Preserve touch, physical-key navigation and accessibility; validate functionality after each visual change.
 - For horizontal category/icon panes, reuse `PaneManager` from `packages/ui/lib/src/components/bbos6/pane_manager.dart` (see `docs/BBOS6_ALBUMS_PANE_MANAGER.md`); supply content/filter callbacks externally. Do not create a separate pane renderer for each Flutter screen. Native Java apps need their own rendering implementation of the shared UI contract.
+- For BBOS6-style inline search, reuse visual-only `Bbos6SearchBar` from `packages/ui/lib/src/components/bbos6/bbos6_search_bar.dart` (see `docs/BBOS6_ALBUMS_TYPE_TO_SEARCH.md`). Supply existing TextField/controllers/filter callbacks; never move search data/business logic into UI components.
 
 ## Rules
 
