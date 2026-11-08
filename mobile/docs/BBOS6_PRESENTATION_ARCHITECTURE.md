@@ -78,6 +78,39 @@ Verified in this fork:
 
 Retain Immich components when only their `ThemeData` styling needs changing. Use a new reusable BBOS6 component where Flutter's theme cannot express a verified gradient, border, icon treatment, or focus state. Avoid duplicate renderers or parallel data pipelines.
 
+## Shared-helper ownership contract
+
+**Shared first, even with a single current consumer.** When a change request
+names a reusable helper, or changes behavior that a reusable helper owns, the
+implementation target is that helper—not the page where the problem was noticed.
+The helper is the source of truth for every current and future instance.
+
+| Owned by shared helper | Supplied by consuming page |
+| --- | --- |
+| Focus/highlight behavior and navigation boundaries | Labels, pane models and content |
+| Physical trackpad / keyboard activation and traversal | Data providers and action callbacks |
+| Reusable Back/Enter state transitions | The page's normal route operations |
+| Common visual design, sizing, gradients and accessibility contract | Layout placement and page-specific content |
+
+**Required workflow:** (1) locate and read the helper and its consumers;
+(2) make shared behavior changes in the helper; (3) update consumers only for
+configuration, data/callback wiring, or the minimal integration needed;
+(4) test the helper independently and verify affected callers; (5) document any
+explicitly requested page-specific exception. Avoid solving a shared problem by
+adding screen-local input handlers or duplicating helper functionality.
+
+**PaneManager example:** Left/Right highlighting, Enter-to-activate,
+focus isolation between the pane bar and owned content, and Back-to-pane
+belong to the shared `PaneManager` / `PaneManagerController` /
+`PaneManagerContent` implementation. Albums simply provides the pane
+descriptions, the selection callback and the content focus target. See
+[Albums PaneManager integration](BBOS6_ALBUMS_PANE_MANAGER.md).
+
+**Exception:** When functionality is inherently specific to a screen
+(e.g., the actual album filter operation or opening an album), retain it in
+that screen's existing business/presentation wiring. Do not move Immich's
+business logic into a generic UI helper.
+
 ## UX contract: BBOS6 appearance, Immich behavior
 
 1. **Focus vs activation:** Visually distinguish unfocused, highlighted/focused and activated/selected state when the interaction requires it. Keyboard/trackpad focus must not accidentally activate a destructive command.
