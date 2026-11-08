@@ -84,6 +84,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
     clearSearch();
     setState(() => _searchVisible = false);
   }
+
   List<RemoteAlbum> sortedAlbums = [];
   List<RemoteAlbum> shownAlbums = [];
 
@@ -247,13 +248,14 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
               ),
             ),
           ),
-          if (_searchVisible) _SearchBar(
-            searchController: searchController,
-            searchFocusNode: searchFocusNode,
-            onSearch: onSearch,
-            filterMode: filter.mode,
-            onClearSearch: dismissSearch,
-          ),
+          if (_searchVisible)
+            _SearchBar(
+              searchController: searchController,
+              searchFocusNode: searchFocusNode,
+              onSearch: onSearch,
+              filterMode: filter.mode,
+              onClearSearch: dismissSearch,
+            ),
           _QuickSortAndViewMode(
             isGrid: isGrid,
             onToggleViewMode: toggleViewMode,
@@ -573,8 +575,8 @@ class _AlbumList extends ConsumerWidget {
 
           if (isOwner) {
             return Dismissible(
-                key: ValueKey(album.id),
-                background: Container(
+              key: ValueKey(album.id),
+              background: Container(
                   color: context.colorScheme.error,
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 16),
@@ -595,8 +597,8 @@ class _AlbumList extends ConsumerWidget {
                 onDismissed: (direction) async {
                   await ref.read(remoteAlbumProvider.notifier).deleteAlbum(album.id);
                 },
-                child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
-              );
+              child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
+            );
           } else {
             return AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected);
           }
