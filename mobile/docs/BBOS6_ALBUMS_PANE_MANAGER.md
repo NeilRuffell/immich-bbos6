@@ -59,6 +59,12 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   and returns to the selected pane without changing its data. Back again is
   passed to the page's existing navigation (Albums returns to Pictures home).
   Inner list/grid directional navigation works normally.
+- `addPostFrameCallback` alone does not schedule a Flutter frame. The shared
+  helper explicitly schedules the focus-handoff frame, including when the
+  already-selected first pane is activated and `onSelected` does not rebuild
+  anything. This prevents focus from remaining on the pane bar until the next
+  trackpad movement. The helper's `BBOS6-PaneManager` focus trace is guarded
+  by `kDebugMode` and is inactive in profile and release APKs.
 - The shared implementation handles Android Back **only** through the
   Router's BackButtonDispatcher (via BackButtonListener). Do not also move focus
   on the physical Back key event inside PaneManagerContent: one physical press
