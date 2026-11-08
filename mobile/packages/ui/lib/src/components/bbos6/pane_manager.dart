@@ -15,12 +15,14 @@ class PaneManagerItem {
 ///
 /// [selectedIndex] is controlled by the parent. PaneManager owns only keyboard
 /// focus, never the content or data represented by a pane. Left and right move
-/// between panes when the bar has focus; Enter/Select and touch activate a pane.
+/// focus only; Enter/Select or touch activates the focused pane. The optional
+/// [onActivated] hook lets a screen transfer focus into its selected content.
 class PaneManager extends StatefulWidget {
   const PaneManager({
     required this.panes,
     required this.selectedIndex,
     required this.onSelected,
+    this.onActivated,
     this.autofocus = false,
     super.key,
   }) : assert(panes.length > 0),
@@ -30,7 +32,13 @@ class PaneManager extends StatefulWidget {
 
   final List<PaneManagerItem> panes;
   final int selectedIndex;
+  /// Called only when activation changes the selected pane.
   final ValueChanged<int> onSelected;
+
+  /// Called on every activation, including an already-selected pane.
+  /// The caller can use it to move focus to the pane's content.
+  final ValueChanged<int>? onActivated;
+
   final bool autofocus;
 
   @override
@@ -67,11 +75,16 @@ class _PaneManagerState extends State<PaneManager> {
     super.dispose();
   }
 
-  void _select(int index) {
+  void _focusPane(int index) {
     _nodes[index].requestFocus();
+  }
+
+  void _activatePane(int index) {
+    _focusPane(index);
     if (index != widget.selectedIndex) {
       widget.onSelected(index);
     }
+    widget.onActivated?.call(index);
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -86,13 +99,13 @@ class _PaneManagerState extends State<PaneManager> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       if (focused > 0) {
-        _select(focused - 1);
+        _focusPane(focused - 1);
       }
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
       if (focused < _nodes.length - 1) {
-        _select(focused + 1);
+        _focusPane(focused + 1);
       }
       return KeyEventResult.handled;
     }
@@ -137,7 +150,7 @@ class _PaneManagerState extends State<PaneManager> {
                           setState(() => _focusedIndex = null);
                         }
                       },
-                      onTap: () => _select(index),
+                      onTap: () => _activatePane(index),
                       hoverColor: Colors.transparent,
                       focusColor: Colors.transparent,
                       highlightColor: Colors.transparent,
