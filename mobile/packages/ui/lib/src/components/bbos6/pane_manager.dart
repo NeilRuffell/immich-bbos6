@@ -162,7 +162,7 @@ class _PaneContentFocusScrollSyncState extends State<_PaneContentFocusScrollSync
 
     // Scroll just enough to put the focused row below any pinned pane header.
     // The viewport computes the reveal offset for slivers and regular lists.
-    final alignment = ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0);
+    final alignment = ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0).toDouble();
     position.ensureVisible(focusedRender, alignment: alignment);
     if (kDebugMode) {
       debugPrint(
