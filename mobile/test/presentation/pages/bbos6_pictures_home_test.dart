@@ -33,7 +33,7 @@ void main() {
   testWidgets('Pictures home has seven rows in the requested order and no tab bar', (tester) async {
     await tester.pumpWidget(buildHome([]));
 
-    expect(find.text('Immich'), findsOneWidget);
+    expect(find.text('immich'), findsOneWidget);
     expect(find.byType(ImmichLogo), findsOneWidget);
     expect(find.byType(Bbos6MediaListTile), findsNWidgets(7));
     final appBar = tester.widget<AppBar>(find.byType(AppBar));
