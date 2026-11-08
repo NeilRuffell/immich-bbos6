@@ -247,6 +247,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
                   PaneManagerItem(label: context.t.my_albums, flex: 3),
                   PaneManagerItem(
                     label: '+',
+                    semanticLabel: context.t.create_album,
                     flex: 1,
                     labelFontSize: 12,
                     onActivate: () => unawaited(context.pushRoute(const CreateAlbumRoute())),
