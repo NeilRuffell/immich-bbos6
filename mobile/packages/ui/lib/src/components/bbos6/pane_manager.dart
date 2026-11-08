@@ -320,11 +320,30 @@ class _PaneContentScrollTraceState extends State<_PaneContentScrollTrace> {
 
 @immutable
 class PaneManagerItem {
-  const PaneManagerItem({required this.label, this.icon, this.showLabel = true}) : assert(label.length > 0);
+  const PaneManagerItem({
+    required this.label,
+    this.icon,
+    this.showLabel = true,
+    this.flex = 1,
+    this.labelFontSize = 14,
+    this.onActivate,
+  }) : assert(label.length > 0),
+       assert(flex > 0),
+       assert(labelFontSize > 0);
 
   final String label;
   final Widget? icon;
   final bool showLabel;
+
+  /// Relative width of this item within the pane bar.
+  final int flex;
+
+  /// Override the label size for compact items without changing other panes.
+  final double labelFontSize;
+
+  /// Optional action item. Activation invokes this callback instead of
+  /// selecting a pane or transferring focus into PaneManagerContent.
+  final VoidCallback? onActivate;
 }
 
 /// A reusable BBOS6-inspired horizontal pane selector.
@@ -437,6 +456,12 @@ class _PaneManagerState extends State<PaneManager> {
   void _activatePane(int index, {required String source}) {
     _traceFocus('activate.start source=$source', paneIndex: index, destination: widget.contentFocusNode);
     _focusPane(index);
+    final action = widget.panes[index].onActivate;
+    if (action != null) {
+      _traceFocus('activate.action', paneIndex: index);
+      action();
+      return;
+    }
     if (index != widget.selectedIndex) {
       widget.onSelected(index);
     }
@@ -537,6 +562,7 @@ class _PaneManagerState extends State<PaneManager> {
             children: [
               for (var index = 0; index < widget.panes.length; index++)
                 Expanded(
+                  flex: widget.panes[index].flex,
                   child: Semantics(
                     label: widget.panes[index].showLabel ? null : widget.panes[index].label,
                     button: true,
@@ -598,7 +624,7 @@ class _PaneManagerState extends State<PaneManager> {
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: widget.panes[index].labelFontSize,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
