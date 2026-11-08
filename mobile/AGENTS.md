@@ -11,6 +11,7 @@ Before editing this fork's mobile appearance, read [BBOS6 presentation architect
 - Keep changes strictly inside the presentation boundary: preserve Immich's service behavior, Riverpod business state, synchronization, backup, permissions, authentication, databases, API, route semantics, and image/playback engine.
 - Prefer shared Flutter controls under `packages/ui/lib/src/components/bbos6/` with tests/previews, then convert screens incrementally. Treat original BBOS6 icon mappings in `bb-ui/assets/bbos6/icon-index.csv` as canonical and review asset redistribution rights before adding images to this fork.
 - Preserve touch, physical-key navigation and accessibility; validate functionality after each visual change.
+- For horizontal category/icon panes, reuse `PaneManager` from `packages/ui/lib/src/components/bbos6/pane_manager.dart` (see `docs/BBOS6_ALBUMS_PANE_MANAGER.md`); supply content/filter callbacks externally. Do not create a separate pane renderer for each Flutter screen. Native Java apps need their own rendering implementation of the shared UI contract.
 
 ## Rules
 
