@@ -2,6 +2,73 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 
+/// Shared navigation state for a PaneManager and its owned content.
+///
+/// The two FocusScopes have stopped traversal edges. Keyboard focus never
+/// crosses between them; explicit pane activation enters content and Back
+/// returns to the selected pane.
+class PaneManagerController {
+  final FocusScopeNode paneScope = FocusScopeNode(
+    debugLabel: 'PaneManager header',
+    traversalEdgeBehavior: TraversalEdgeBehavior.stop,
+    directionalTraversalEdgeBehavior: TraversalEdgeBehavior.stop,
+  );
+  final FocusScopeNode contentScope = FocusScopeNode(
+    debugLabel: 'PaneManager content',
+    traversalEdgeBehavior: TraversalEdgeBehavior.stop,
+    directionalTraversalEdgeBehavior: TraversalEdgeBehavior.stop,
+  );
+
+  List<FocusNode> _paneNodes = const [];
+  int _selectedIndex = 0;
+
+  bool get isInContent => contentScope.hasFocus;
+
+  void _attach(List<FocusNode> nodes, int selectedIndex) {
+    _paneNodes = nodes;
+    _selectedIndex = selectedIndex;
+  }
+
+  void _updateSelection(int selectedIndex) {
+    _selectedIndex = selectedIndex;
+  }
+
+  void _detach(List<FocusNode> nodes) {
+    if (identical(_paneNodes, nodes)) {
+      _paneNodes = const [];
+    }
+  }
+
+  /// Called by the shared Back handler; false leaves normal page Back intact.
+  bool returnToPanes() {
+    if (!isInContent || _selectedIndex >= _paneNodes.length) {
+      return false;
+    }
+    _paneNodes[_selectedIndex].requestFocus();
+    return true;
+  }
+
+  void dispose() {
+    paneScope.dispose();
+    contentScope.dispose();
+  }
+}
+
+/// Isolates the owned list/grid from the PaneManager focus scope.
+/// Place all relevant content controls and list slivers beneath this widget.
+class PaneManagerContent extends StatelessWidget {
+  const PaneManagerContent({required this.controller, required this.child, super.key});
+
+  final PaneManagerController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusScope(node: controller.contentScope, child: child);
+  }
+}
+
+
 @immutable
 class PaneManagerItem {
   const PaneManagerItem({required this.label, this.icon, this.showLabel = true}) : assert(label.length > 0);
@@ -24,6 +91,7 @@ class PaneManager extends StatefulWidget {
     required this.selectedIndex,
     required this.onSelected,
     this.contentFocusNode,
+    this.controller,
     this.autofocus = false,
     super.key,
   }) : assert(panes.length > 0),
@@ -40,6 +108,9 @@ class PaneManager extends StatefulWidget {
   /// The caller supplies only the target node; PaneManager handles navigation.
   final FocusNode? contentFocusNode;
 
+  /// Supply with a [PaneManagerContent] to enable strict focus isolation and Back.
+  final PaneManagerController? controller;
+
   final bool autofocus;
 
   @override
@@ -48,28 +119,44 @@ class PaneManager extends StatefulWidget {
 
 class _PaneManagerState extends State<PaneManager> {
   late List<FocusNode> _nodes;
+  final _ownPaneScope = FocusScopeNode(
+    debugLabel: 'Standalone PaneManager header',
+    traversalEdgeBehavior: TraversalEdgeBehavior.stop,
+    directionalTraversalEdgeBehavior: TraversalEdgeBehavior.stop,
+  );
   int? _focusedIndex;
 
   @override
   void initState() {
     super.initState();
     _nodes = List.generate(widget.panes.length, (_) => FocusNode());
+    widget.controller?._attach(_nodes, widget.selectedIndex);
   }
 
   @override
   void didUpdateWidget(PaneManager oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(_nodes);
+      widget.controller?._attach(_nodes, widget.selectedIndex);
+    } else {
+      widget.controller?._updateSelection(widget.selectedIndex);
+    }
     if (oldWidget.panes.length != widget.panes.length) {
+      widget.controller?._detach(_nodes);
       for (final node in _nodes) {
         node.dispose();
       }
       _nodes = List.generate(widget.panes.length, (_) => FocusNode());
+      widget.controller?._attach(_nodes, widget.selectedIndex);
       _focusedIndex = null;
     }
   }
 
   @override
   void dispose() {
+    widget.controller?._detach(_nodes);
+    _ownPaneScope.dispose();
     for (final node in _nodes) {
       node.dispose();
     }
@@ -135,8 +222,11 @@ class _PaneManagerState extends State<PaneManager> {
       return KeyEventResult.handled;
     }
 
-    // Keep Up/Down available to Flutter's normal focus traversal so the album
-    // list and other controls remain reachable by the Q25 trackpad.
+    // Never enter the owned content via Up/Down. Back is the only return path.
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      return KeyEventResult.handled;
+    }
     return KeyEventResult.ignored;
   }
 
@@ -148,7 +238,7 @@ class _PaneManagerState extends State<PaneManager> {
       colors: [Color(0xFF4B4E53), Color(0xFF292C31)],
     );
 
-    return SizedBox(
+    final paneBar = SizedBox(
       height: PaneManager.height,
       child: Material(
         color: Colors.black,
@@ -237,6 +327,25 @@ class _PaneManagerState extends State<PaneManager> {
           ),
         ),
       ),
+    );
+    final scopedBar = FocusScope(
+      node: widget.controller?.paneScope ?? _ownPaneScope,
+      child: paneBar,
+    );
+    final controller = widget.controller;
+    if (controller == null) {
+      return scopedBar;
+    }
+    // Consumes Android system Back while the owned list has focus. When
+    // PaneManager has focus, Back is unhandled and the page navigates normally.
+    return BackButtonListener(
+      onBackButtonPressed: () async {
+        if (ModalRoute.of(context)?.isCurrent != true) {
+          return false;
+        }
+        return controller.returnToPanes();
+      },
+      child: scopedBar,
     );
   }
 }
