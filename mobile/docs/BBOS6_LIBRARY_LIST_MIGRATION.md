@@ -17,6 +17,7 @@ The original `LibraryPage` data subscriptions and the exact `onTap` route action
 
 - `NeilRuffell/bb-ui` branch `master`: `music-app/app/src/main/java/dev/q25/bbmusic/MusicListView.java`
 - `NeilRuffell/bb-ui` branch `master`: `music-app/app/src/main/java/dev/q25/bbmusic/MusicSelectionGradient.java`
+- BB Music source revision: `89ce1261ccf1c5003bdc0e104280c70221e7e519` (reference checked during this implementation).
 
 Verified and ported to Flutter:
 
