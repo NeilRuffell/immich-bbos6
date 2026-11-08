@@ -64,7 +64,22 @@ class PaneManagerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FocusScope(node: controller.contentScope, child: child);
+    return FocusScope(
+      node: controller.contentScope,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) {
+          return KeyEventResult.ignored;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.goBack ||
+            event.logicalKey == LogicalKeyboardKey.browserBack) {
+          return controller.returnToPanes()
+              ? KeyEventResult.handled
+              : KeyEventResult.ignored;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: child,
+    );
   }
 }
 
