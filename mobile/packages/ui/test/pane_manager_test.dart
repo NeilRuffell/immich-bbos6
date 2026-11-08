@@ -182,6 +182,61 @@ void main() {
     expect(all, shared);
   });
 
+  testWidgets('compact action pane activates without selecting a pane or entering content', (tester) async {
+    var actionCount = 0;
+    final selectedIndices = <int>[];
+    final contentFocus = FocusNode(debugLabel: 'Album list');
+    addTearDown(contentFocus.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              PaneManager(
+                panes: [
+                  const PaneManagerItem(label: 'All', flex: 3),
+                  const PaneManagerItem(label: 'Shared', flex: 3),
+                  const PaneManagerItem(label: 'My Albums', flex: 3),
+                  PaneManagerItem(
+                    label: '+',
+                    flex: 1,
+                    labelFontSize: 12,
+                    onActivate: () => actionCount++,
+                  ),
+                ],
+                selectedIndex: 0,
+                onSelected: selectedIndices.add,
+                contentFocusNode: contentFocus,
+              ),
+              TextButton(focusNode: contentFocus, onPressed: () {}, child: const Text('Album')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final regularWidth = tester.getSize(find.byKey(const ValueKey('pane-0'))).width;
+    final actionWidth = tester.getSize(find.byKey(const ValueKey('pane-3'))).width;
+    expect(actionWidth, lessThan(regularWidth));
+    expect(tester.widget<Text>(find.text('+')).style?.fontSize, 12);
+
+    await tester.tap(find.text('+'));
+    await tester.pump();
+    expect(actionCount, 1);
+    expect(selectedIndices, isEmpty);
+    expect(contentFocus.hasFocus, isFalse);
+
+    final actionFocus = tester.widget<InkWell>(find.byKey(const ValueKey('pane-3'))).focusNode!;
+    actionFocus.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(actionCount, 2);
+    expect(selectedIndices, isEmpty);
+    expect(contentFocus.hasFocus, isFalse);
+  });
+
   testWidgets('touch commits selection and helper focuses the content target', (tester) async {
     var selected = 0;
     final changes = <int>[];
