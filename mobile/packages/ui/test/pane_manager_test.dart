@@ -10,6 +10,26 @@ const panes = [
   PaneManagerItem(label: 'My Albums'),
 ];
 
+/// Minimal Router delegate used to exercise the real back dispatcher path.
+class _PaneBackTestDelegate extends RouterDelegate<Object> with ChangeNotifier {
+  _PaneBackTestDelegate(this.child);
+
+  final Widget child;
+  int pageBackCount = 0;
+
+  @override
+  Widget build(BuildContext context) => child;
+
+  @override
+  Future<void> setNewRoutePath(Object configuration) async {}
+
+  @override
+  Future<bool> popRoute() async {
+    pageBackCount++;
+    return true;
+  }
+}
+
 void main() {
   testWidgets('PaneManager has three equal, square panes and uses the shared selection gradient', (tester) async {
     await tester.pumpWidget(
@@ -322,6 +342,83 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(controller.isInContent, isFalse);
+  });
+
+  testWidgets('one physical Back triggers exactly one transition through router', (tester) async {
+    final controller = PaneManagerController();
+    final contentNode = FocusNode(debugLabel: 'Album list');
+    final dispatcher = RootBackButtonDispatcher();
+    addTearDown(controller.dispose);
+    addTearDown(contentNode.dispose);
+
+    var keyboardBacks = 0;
+    final delegate = _PaneBackTestDelegate(
+      Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.goBack) {
+            keyboardBacks++;
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Column(
+          children: [
+            PaneManager(
+              panes: panes,
+              selectedIndex: 0,
+              onSelected: (_) {},
+              contentFocusNode: contentNode,
+              controller: controller,
+            ),
+            PaneManagerContent(
+              controller: controller,
+              child: TextButton(
+                focusNode: contentNode,
+                onPressed: () {},
+                child: const Text('Album'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Router<Object>(
+          routerDelegate: delegate,
+          backButtonDispatcher: dispatcher,
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+
+    tester.widget<InkWell>(find.byKey(const ValueKey('pane-0'))).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(contentNode.hasFocus, isTrue);
+
+    // Physical key delivery alone must not change focus: Android also sends
+    // a route-pop notification for Back. The parent captures the key here to
+    // make that double-delivery deterministic.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.goBack);
+    await tester.pump();
+    expect(keyboardBacks, 1);
+    expect(contentNode.hasFocus, isTrue);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.goBack);
+    await tester.pump();
+
+    final firstHandled = await dispatcher.invokeCallback(Future<bool>.value(false));
+    await tester.pump();
+    expect(firstHandled, isTrue);
+    expect(controller.isInContent, isFalse);
+    expect(delegate.pageBackCount, 0); // First Back stops at PaneManager.
+
+    final secondHandled = await dispatcher.invokeCallback(Future<bool>.value(false));
+    await tester.pump();
+    expect(secondHandled, isTrue);
+    expect(delegate.pageBackCount, 1); // Second distinct Back exits page.
   });
 
   testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
