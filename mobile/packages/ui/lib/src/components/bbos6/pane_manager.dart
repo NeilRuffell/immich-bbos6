@@ -74,9 +74,109 @@ class PaneManagerContent extends StatelessWidget {
       // Back is handled only by PaneManager's BackButtonListener below.
       // Also intercepting a physical Back key here changes focus before
       // Android dispatches its route pop and can make one press pop twice.
-      child: kDebugMode ? _PaneContentScrollTrace(controller: controller, child: child) : child,
+      child: _PaneContentFocusScrollSync(
+        controller: controller,
+        child: kDebugMode ? _PaneContentScrollTrace(controller: controller, child: child) : child,
+      ),
     );
   }
+}
+
+/// Keeps keyboard/trackpad focus visible within the PaneManager-owned
+/// Scrollable, including when moving upward behind a pinned pane header.
+/// This wrapper is safe for RenderSliver children: it creates no RenderBox.
+class _PaneContentFocusScrollSync extends StatefulWidget {
+  const _PaneContentFocusScrollSync({required this.controller, required this.child});
+
+  final PaneManagerController controller;
+  final Widget child;
+
+  @override
+  State<_PaneContentFocusScrollSync> createState() => _PaneContentFocusScrollSyncState();
+}
+
+class _PaneContentFocusScrollSyncState extends State<_PaneContentFocusScrollSync> {
+  ScrollableState? _scrollable;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_keepFocusedItemVisible);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scrollable = Scrollable.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_keepFocusedItemVisible);
+    super.dispose();
+  }
+
+  void _keepFocusedItemVisible() {
+    if (!widget.controller.contentScope.hasFocus) {
+      return;
+    }
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    final scrollable = _scrollable;
+    if (focusedContext == null || scrollable == null || Scrollable.maybeOf(focusedContext) != scrollable) {
+      return;
+    }
+
+    final position = scrollable.position;
+    final focusedRender = focusedContext.findRenderObject();
+    final viewportRender = scrollable.context.findRenderObject();
+    if (!position.hasPixels ||
+        !position.hasContentDimensions ||
+        focusedRender is! RenderBox ||
+        !focusedRender.attached ||
+        !focusedRender.hasSize ||
+        viewportRender is! RenderBox ||
+        !viewportRender.attached ||
+        !viewportRender.hasSize ||
+        viewportRender.size.height <= 0) {
+      return;
+    }
+
+    final viewportTop = viewportRender.localToGlobal(Offset.zero).dy;
+    final viewportBottom = viewportTop + viewportRender.size.height;
+    var visibleTop = viewportTop;
+
+    // The pane bar can be pinned over the Scrollable's viewport. Account
+    // for its actual rendered bottom rather than hardcoding an Albums offset.
+    final paneRender = widget.controller.paneScope.context?.findRenderObject();
+    if (paneRender is RenderBox && paneRender.attached && paneRender.hasSize) {
+      final paneBottom = paneRender.localToGlobal(Offset(0, paneRender.size.height)).dy;
+      if (paneBottom > visibleTop && paneBottom < viewportBottom) {
+        visibleTop = paneBottom;
+      }
+    }
+
+    final focusedTop = focusedRender.localToGlobal(Offset.zero).dy;
+    if (focusedTop >= visibleTop - 0.5) {
+      return; // Do not interfere with Flutter's working downward scrolling.
+    }
+
+    // Scroll just enough to put the focused row below any pinned pane header.
+    // The viewport computes the reveal offset for slivers and regular lists.
+    final alignment = ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0);
+    position.ensureVisible(focusedRender, alignment: alignment);
+    if (kDebugMode) {
+      debugPrint(
+        'BBOS6-PaneScroll: focus.reveal-up '
+        'focus=${FocusManager.instance.primaryFocus?.debugLabel ?? "none"} '
+        'visibleTop=${visibleTop.toStringAsFixed(1)} '
+        'itemTop=${focusedTop.toStringAsFixed(1)} '
+        'scrollPixels=${position.pixels.toStringAsFixed(1)}',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Debug-only observer. It is omitted from profile and release widget trees.
