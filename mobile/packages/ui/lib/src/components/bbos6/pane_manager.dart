@@ -15,14 +15,15 @@ class PaneManagerItem {
 ///
 /// [selectedIndex] is controlled by the parent. PaneManager owns only keyboard
 /// focus, never the content or data represented by a pane. Left and right move
-/// focus only; Enter/Select or touch activates the focused pane. The optional
-/// [onActivated] hook lets a screen transfer focus into its selected content.
+/// focus only; Enter/Select or touch activates the focused pane. When a
+/// [contentFocusNode] is supplied, this helper also transfers focus into
+/// the selected pane's first content item after the parent updates it.
 class PaneManager extends StatefulWidget {
   const PaneManager({
     required this.panes,
     required this.selectedIndex,
     required this.onSelected,
-    this.onActivated,
+    this.contentFocusNode,
     this.autofocus = false,
     super.key,
   }) : assert(panes.length > 0),
@@ -35,9 +36,9 @@ class PaneManager extends StatefulWidget {
   /// Called only when activation changes the selected pane.
   final ValueChanged<int> onSelected;
 
-  /// Called on every activation, including an already-selected pane.
-  /// The caller can use it to move focus to the pane's content.
-  final ValueChanged<int>? onActivated;
+  /// A focus target inside the currently displayed pane's content.
+  /// The caller supplies only the target node; PaneManager handles navigation.
+  final FocusNode? contentFocusNode;
 
   final bool autofocus;
 
@@ -84,7 +85,22 @@ class _PaneManagerState extends State<PaneManager> {
     if (index != widget.selectedIndex) {
       widget.onSelected(index);
     }
-    widget.onActivated?.call(index);
+    final destination = widget.contentFocusNode;
+    if (destination == null) {
+      return;
+    }
+
+    // Sliver lists build items lazily. Reset the containing scroll view first
+    // so the initial content item can be mounted before requesting its focus.
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable != null && scrollable.position.hasPixels) {
+      scrollable.position.jumpTo(scrollable.position.minScrollExtent);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && destination.context != null) {
+        destination.requestFocus();
+      }
+    });
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
