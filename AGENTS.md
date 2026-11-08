@@ -2,6 +2,24 @@
 
 Immich monorepo: `server/` (NestJS API + job workers), `web/` (SvelteKit SPA), `mobile/` (Flutter), `native/` (Rust core for mobile), `machine-learning/` (FastAPI + ONNX), `e2e/` (API + Playwright tests), `packages/` (`@immich/sdk`, `@immich/cli`, plugin SDK/core, release scripts), `open-api/`, `i18n/`, `docs/`. Before changing code in `server/`, `web/`, `mobile/`, `native/`, `machine-learning/` or `e2e/`, read that folder's `AGENTS.md`.
 
+## BBOS6 fork: shared-helper ownership
+
+For work on this fork's BlackBerry-style mobile UI, read `mobile/AGENTS.md` and
+`mobile/docs/BBOS6_PRESENTATION_ARCHITECTURE.md` before changing a component.
+
+**When a requested change concerns a shared helper or reusable widget, modify
+the shared implementation, not just the first page where the behavior appears.**
+Every existing and future consumer should inherit the changed default behavior.
+Pages may configure the helper (data, labels, content focus targets, callbacks)
+but must not recreate or override its navigation, input, focus, state-transition,
+or visual rules to produce the requested shared behavior. An explicitly
+page-specific exception must be requested and documented.
+
+Inspect all existing call sites, maintain backward compatibility where intended,
+and test the helper plus affected consumers. See the detailed policy in
+`mobile/AGENTS.md`. The PaneManager and its owned content are an example,
+**not** a special case.
+
 ## Rules
 
 - No PRs of LLM-generated code; the human contributor must understand and be able to explain every change (see `CONTRIBUTING.md`).
