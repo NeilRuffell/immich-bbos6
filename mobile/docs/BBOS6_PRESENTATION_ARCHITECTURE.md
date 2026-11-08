@@ -68,7 +68,7 @@ Verified in this fork:
 - `mobile/packages/ui/lib/src/theme.dart`: additional shared-package theme/extension.
 - `mobile/packages/ui/lib/src/components/`: existing shared `immich_ui` controls (including menu, button and settings components).
 - `mobile/packages/ui/lib/immich_ui.dart`: exports for shared widgets.
-- `mobile/lib/pages/common/tab_shell.page.dart`: four main tabs, `AutoTabsRouter`, bottom `NavigationBar`, landscape `NavigationRail`, and route-selection callbacks.
+- `mobile/lib/pages/common/tab_shell.page.dart`: now presents the [approved six-entry Pictures home](BBOS6_PICTURES_HOME.md), without visible bottom tabs or landscape rail. The existing four `AutoTabsRouter` children and route-selection actions remain for compatibility.
 - `mobile/lib/presentation/widgets/timeline/`: photo timeline, segmented layout, scrolling, scrubber, pinch zoom and drag selection. **Retain those mechanisms.**
 - `mobile/lib/presentation/widgets/asset_viewer/`: image/video viewer controls, app bars, bottom bar and menus; keep the existing underlying asset state and playback handlers.
 - `mobile/lib/presentation/pages/`: current screens; `mobile/lib/pages/` and `mobile/lib/widgets/` also contain older but active presentation code.
@@ -101,5 +101,6 @@ Retain Immich components when only their `ThemeData` styling needs changing. Use
 - **2026-11-07:** Adopt a presentation-only fork of official Immich mobile.
 - **2026-11-07:** Select a hybrid approach: shared Flutter design system plus incremental page conversions; no wholesale UI rewrite.
 - **2026-11-07:** Make `NeilRuffell/bb-ui` branch **`master`**, especially its working standalone BB Music app, the primary reference for BlackBerry OS 6 media styling. Import *appearance and verified interaction patterns*, not its Android Java, audio engine, or platform-specific implementations.
+- **2026-11-08:** Approve a dedicated six-entry **Pictures home** with Pictures Library, Albums, On Device, Memories, Places and People, replacing visible Immich bottom/side tabs while retaining existing internal route behavior. See [Pictures home navigation](BBOS6_PICTURES_HOME.md).
 
-**Current status:** Architecture/documentation only. No Immich application UI or runtime functionality has been modified as part of this decision.
+**Current status:** The shared BBOS6 media list row is integrated into Library quick-access rows, and the approved six-entry Pictures home replaces the visible four-tab navigation. Existing internal routes remain. Build, widget tests and on-device navigation must be validated on the target Android device.

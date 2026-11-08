@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:immich_mobile/data/store.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
@@ -421,15 +422,11 @@ class _QuickAccessItem {
   final Widget leading;
   final String title;
   final VoidCallback onTap;
-  final EdgeInsetsGeometry? contentPadding;
-
-  const _QuickAccessItem({required this.leading, required this.title, required this.onTap, this.contentPadding});
+  const _QuickAccessItem({required this.leading, required this.title, required this.onTap});
 }
 
 class _QuickAccessButtonList extends ConsumerWidget {
   const _QuickAccessButtonList();
-
-  static const _tileRadius = 20.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -454,7 +451,6 @@ class _QuickAccessButtonList extends ConsumerWidget {
       ),
       for (final partner in partners)
         _QuickAccessItem(
-          contentPadding: const EdgeInsets.only(left: 12.0, right: 18.0),
           leading: PartnerUserAvatar(userId: partner.id, name: partner.name),
           title: context.t.partner_list_user_photos(user: partner.name),
           onTap: () => context.pushRoute(PartnerDetailRoute(partner: partner)),
@@ -462,47 +458,22 @@ class _QuickAccessButtonList extends ConsumerWidget {
     ];
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 32),
+      padding: const EdgeInsets.only(top: 12, bottom: 32),
       sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
-            borderRadius: const BorderRadius.all(Radius.circular(_tileRadius)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withAlpha(10),
-                context.colorScheme.primary.withAlpha(15),
-                context.colorScheme.primary.withAlpha(20),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: ListView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final isFirst = index == 0;
-              final isLast = index == items.length - 1;
-              return ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(isFirst ? _tileRadius : 0),
-                    topRight: Radius.circular(isFirst ? _tileRadius : 0),
-                    bottomLeft: Radius.circular(isLast ? _tileRadius : 0),
-                    bottomRight: Radius.circular(isLast ? _tileRadius : 0),
-                  ),
-                ),
-                contentPadding: item.contentPadding,
-                leading: item.leading,
-                title: Text(item.title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
-                onTap: item.onTap,
-              );
-            },
-          ),
+        child: ListView.builder(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Bbos6MediaListTile(
+              leading: item.leading,
+              title: item.title,
+              onTap: item.onTap,
+              showDivider: index < items.length - 1,
+            );
+          },
         ),
       ),
     );
