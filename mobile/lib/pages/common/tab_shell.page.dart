@@ -10,7 +10,6 @@ import 'package:immich_mobile/presentation/pages/bbos6_pictures_home.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
@@ -85,10 +84,6 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
   // On Photos page menu tapped
   if (router.activeIndex == kPhotoTabIndex && index == kPhotoTabIndex) {
     EventStream.shared.emit(const ScrollToTopEvent());
-  }
-
-  if (index == kPhotoTabIndex) {
-    ref.invalidate(memoryLaneProvider);
   }
 
   if (router.activeIndex != kSearchTabIndex && index == kSearchTabIndex) {
