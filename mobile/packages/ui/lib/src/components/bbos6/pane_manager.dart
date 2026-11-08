@@ -233,6 +233,10 @@ class _PaneManagerState extends State<PaneManager> {
         });
       }
     });
+    // addPostFrameCallback alone does not request a frame. Activating the
+    // already-selected pane doesn't call onSelected or rebuild the page.
+    // Explicitly schedule the frame needed for the focus handoff.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
