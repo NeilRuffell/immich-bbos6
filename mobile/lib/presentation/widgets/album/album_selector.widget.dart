@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
@@ -24,10 +24,16 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/album_filter.utils.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
-import 'package:immich_mobile/widgets/common/search_field.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 typedef AlbumSelectorCallback = void Function(RemoteAlbum album);
+
+// Explicit mapping keeps the pane order independent of enum declaration order.
+const _albumPaneFilters = [
+  QuickFilterMode.all,
+  QuickFilterMode.sharedWithMe,
+  QuickFilterMode.myAlbums,
+];
 
 class AlbumSelector extends ConsumerStatefulWidget {
   final AlbumSelectorCallback onAlbumSelected;
@@ -36,14 +42,49 @@ class AlbumSelector extends ConsumerStatefulWidget {
   const AlbumSelector({super.key, required this.onAlbumSelected, this.onKeyboardExpanded});
 
   @override
-  ConsumerState<AlbumSelector> createState() => _AlbumSelectorState();
+  ConsumerState<AlbumSelector> createState() => AlbumSelectorState();
 }
 
-class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
+class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   bool isGrid = false;
   final searchController = TextEditingController();
   final menuController = MenuController();
   final searchFocusNode = FocusNode();
+  bool _searchVisible = false;
+
+  bool get isSearchVisible => _searchVisible;
+  bool get isSearchInputFocused => searchFocusNode.hasFocus;
+
+  /// Reveals the existing search input after a physical key is typed.
+  /// The controller's existing listeners still perform filtering.
+  void beginSearchWith(String characters) {
+    if (characters.isEmpty) {
+      return;
+    }
+    if (!_searchVisible) {
+      setState(() => _searchVisible = true);
+    }
+    final text = searchController.text + characters;
+    searchController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _searchVisible) {
+        searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void dismissSearch() {
+    if (!_searchVisible) {
+      return;
+    }
+    searchFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    clearSearch();
+    setState(() => _searchVisible = false);
+  }
+
   List<RemoteAlbum> sortedAlbums = [];
   List<RemoteAlbum> shownAlbums = [];
 
@@ -92,7 +133,11 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
 
   void changeFilter(QuickFilterMode mode) {
     setState(() {
-      filter = filter.copyWith(mode: mode);
+      filter = filter.copyWith(
+        mode: mode,
+        query: searchController.text,
+        userId: ref.read(currentUserProvider)?.id,
+      );
     });
 
     unawaited(filterAlbums());
@@ -184,20 +229,33 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
         menuController.close();
       },
       child: MultiSliver(
+        pushPinnedChildren: true,
         children: [
-          _SearchBar(
-            searchController: searchController,
-            searchFocusNode: searchFocusNode,
-            onSearch: onSearch,
-            filterMode: filter.mode,
-            onClearSearch: clearSearch,
+          // Stay visible above the album list while scrolling, as a BBOS6
+          // pane selector. Existing Immich filtering remains the data source.
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _AlbumPaneHeaderDelegate(
+              child: PaneManager(
+                panes: [
+                  PaneManagerItem(label: context.t.all),
+                  const PaneManagerItem(label: 'Shared'),
+                  PaneManagerItem(label: context.t.my_albums),
+                ],
+                selectedIndex: _albumPaneFilters.indexOf(filter.mode),
+                onSelected: (index) => changeFilter(_albumPaneFilters[index]),
+                autofocus: true,
+              ),
+            ),
           ),
-          _QuickFilterButtonRow(
-            filterMode: filter.mode,
-            onChangeFilter: changeFilter,
-            onSearch: onSearch,
-            searchController: searchController,
-          ),
+          if (_searchVisible)
+            _SearchBar(
+              searchController: searchController,
+              searchFocusNode: searchFocusNode,
+              onSearch: onSearch,
+              filterMode: filter.mode,
+              onClearSearch: dismissSearch,
+            ),
           _QuickSortAndViewMode(
             isGrid: isGrid,
             onToggleViewMode: toggleViewMode,
@@ -387,88 +445,41 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withValues(alpha: 0.075),
-                context.colorScheme.primary.withValues(alpha: 0.09),
-                context.colorScheme.primary.withValues(alpha: 0.075),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              transform: const GradientRotation(0.5 * pi),
-            ),
-          ),
-          child: SearchField(
-            autofocus: false,
-            contentPadding: const EdgeInsets.all(16),
-            hintText: context.t.search_albums,
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: searchController.text.isNotEmpty
-                ? IconButton(icon: const Icon(Icons.clear_rounded), onPressed: onClearSearch)
-                : null,
-            controller: searchController,
-            onChanged: (_) => onSearch(searchController.text, filterMode),
-            focusNode: searchFocusNode,
-            onTapOutside: (_) => searchFocusNode.unfocus(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickFilterButtonRow extends StatelessWidget {
-  const _QuickFilterButtonRow({
-    required this.filterMode,
-    required this.onChangeFilter,
-    required this.onSearch,
-    required this.searchController,
-  });
-
-  final QuickFilterMode filterMode;
-  final void Function(QuickFilterMode) onChangeFilter;
-  final void Function(String, QuickFilterMode) onSearch;
-  final TextEditingController searchController;
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverToBoxAdapter(
-        child: Wrap(
-          spacing: 4,
-          runSpacing: 4,
+    return SliverToBoxAdapter(
+      child: Bbos6SearchBar(
+        child: Row(
           children: [
-            _QuickFilterButton(
-              label: context.t.all,
-              isSelected: filterMode == QuickFilterMode.all,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.all);
-                onSearch(searchController.text, QuickFilterMode.all);
-              },
+            const Icon(Icons.search, color: Color(0xFF6B7074), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                focusNode: searchFocusNode,
+                onChanged: (text) => onSearch(text, filterMode),
+                onTapOutside: (_) => searchFocusNode.unfocus(
+                  disposition: UnfocusDisposition.previouslyFocusedChild,
+                ),
+                textInputAction: TextInputAction.search,
+                style: const TextStyle(color: Color(0xFF24272B), fontSize: 16),
+                cursorColor: const Color(0xFF24272B),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: context.t.search_albums,
+                  hintStyle: const TextStyle(color: Color(0xFFB6B7BB)),
+                ),
+              ),
             ),
-            _QuickFilterButton(
-              label: context.t.shared_with_me,
-              isSelected: filterMode == QuickFilterMode.sharedWithMe,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.sharedWithMe);
-                onSearch(searchController.text, QuickFilterMode.sharedWithMe);
-              },
-            ),
-            _QuickFilterButton(
-              label: context.t.my_albums,
-              isSelected: filterMode == QuickFilterMode.myAlbums,
-              onTap: () {
-                onChangeFilter(QuickFilterMode.myAlbums);
-                onSearch(searchController.text, QuickFilterMode.myAlbums);
-              },
+            IconButton(
+              tooltip: context.t.cancel,
+              icon: const Icon(Icons.close, color: Color(0xFF4E555B), size: 20),
+              onPressed: onClearSearch,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
           ],
         ),
@@ -477,35 +488,24 @@ class _QuickFilterButtonRow extends StatelessWidget {
   }
 }
 
-class _QuickFilterButton extends StatelessWidget {
-  const _QuickFilterButton({required this.isSelected, required this.onTap, required this.label});
+class _AlbumPaneHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _AlbumPaneHeaderDelegate({required this.child});
 
-  final bool isSelected;
-  final VoidCallback onTap;
-  final String label;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.all(isSelected ? context.colorScheme.primary : Colors.transparent),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
-            side: BorderSide(color: context.colorScheme.onSurface.withAlpha(25), width: 1),
-          ),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? context.colorScheme.onPrimary : context.colorScheme.onSurface,
-          fontSize: 14,
-        ),
-      ),
-    );
+  double get minExtent => PaneManager.height;
+
+  @override
+  double get maxExtent => PaneManager.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return ColoredBox(color: Colors.black, child: child);
   }
+
+  @override
+  bool shouldRebuild(covariant _AlbumPaneHeaderDelegate oldDelegate) => true;
 }
 
 class _QuickSortAndViewMode extends StatelessWidget {
@@ -572,18 +572,16 @@ class _AlbumList extends ConsumerWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16, bottom: 64),
+      padding: const EdgeInsets.only(bottom: 64),
       sliver: SliverList.builder(
         itemBuilder: (_, index) {
           final album = albums[index];
           final isOwner = album.ownerId == userId;
 
           if (isOwner) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Dismissible(
-                key: ValueKey(album.id),
-                background: Container(
+            return Dismissible(
+              key: ValueKey(album.id),
+              background: Container(
                   color: context.colorScheme.error,
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 16),
@@ -604,14 +602,10 @@ class _AlbumList extends ConsumerWidget {
                 onDismissed: (direction) async {
                   await ref.read(remoteAlbumProvider.notifier).deleteAlbum(album.id);
                 },
-                child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
-              ),
-            );
-          } else {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
               child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
             );
+          } else {
+            return AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected);
           }
         },
         itemCount: albums.length,

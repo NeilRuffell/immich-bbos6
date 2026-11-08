@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/album/album_selector.widget.dart';
@@ -19,6 +20,41 @@ class AlbumsPage extends ConsumerStatefulWidget {
 
 class _AlbumsPageState extends ConsumerState<AlbumsPage> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<AlbumSelectorState> _albumSelectorKey = GlobalKey<AlbumSelectorState>();
+
+  KeyEventResult _handleTypeToSearch(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (ModalRoute.of(context)?.isCurrent != true) {
+      return KeyEventResult.ignored;
+    }
+
+    final albums = _albumSelectorKey.currentState;
+    if (albums == null) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape && albums.isSearchVisible) {
+      albums.dismissSearch();
+      return KeyEventResult.handled;
+    }
+
+    // Let the actual text field edit normally once it has focus.
+    if (albums.isSearchInputFocused || HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed || HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
+
+    final characters = event.character;
+    if (characters == null || characters.isEmpty ||
+        !characters.runes.every((rune) => rune >= 0x20 && rune != 0x7F)) {
+      return KeyEventResult.ignored;
+    }
+
+    albums.beginSearchWith(characters);
+    return KeyEventResult.handled;
+  }
 
   Future<void> onRefresh() async {
     await ref.read(remoteAlbumProvider.notifier).refresh();
@@ -52,6 +88,7 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
           showUploadButton: false,
         ),
         AlbumSelector(
+          key: _albumSelectorKey,
           onAlbumSelected: (album) {
             unawaited(context.router.push(RemoteAlbumRoute(album: album)));
           },
@@ -59,23 +96,27 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
       ],
     );
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      edgeOffset: 100,
-      child: showScrollbar
-          ? RawScrollbar(
-              controller: _scrollController,
-              interactive: true,
-              thickness: 8,
-              radius: const Radius.circular(4),
-              thumbVisibility: false,
-              thumbColor: context.colorScheme.primary,
-              crossAxisMargin: 4,
-              mainAxisMargin: 60,
-              minThumbLength: 40,
-              child: scrollView,
-            )
-          : scrollView,
+    return Focus(
+      // PaneManager owns initial focus so its highlight remains visible.
+      onKeyEvent: _handleTypeToSearch,
+      child: RefreshIndicator(
+        onRefresh: onRefresh,
+        edgeOffset: 100,
+        child: showScrollbar
+            ? RawScrollbar(
+                controller: _scrollController,
+                interactive: true,
+                thickness: 8,
+                radius: const Radius.circular(4),
+                thumbVisibility: false,
+                thumbColor: context.colorScheme.primary,
+                crossAxisMargin: 4,
+                mainAxisMargin: 60,
+                minThumbLength: 40,
+                child: scrollView,
+              )
+            : scrollView,
+      ),
     );
   }
 }
