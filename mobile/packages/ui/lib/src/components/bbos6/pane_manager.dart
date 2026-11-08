@@ -70,18 +70,9 @@ class PaneManagerContent extends StatelessWidget {
       // inserts a RenderBox, which is invalid directly above slivers.
       // Disabling only this wrapper's semantics preserves content semantics.
       includeSemantics: false,
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) {
-          return KeyEventResult.ignored;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.goBack ||
-            event.logicalKey == LogicalKeyboardKey.browserBack) {
-          return controller.returnToPanes()
-              ? KeyEventResult.handled
-              : KeyEventResult.ignored;
-        }
-        return KeyEventResult.ignored;
-      },
+      // Back is handled only by PaneManager's BackButtonListener below.
+      // Also intercepting a physical Back key here changes focus before
+      // Android dispatches its route pop and can make one press pop twice.
       child: child,
     );
   }
