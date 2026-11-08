@@ -270,6 +270,60 @@ void main() {
     expect(controller.returnToPanes(), isFalse);
   });
 
+  testWidgets('PaneManagerContent supports RenderSliver children without a RenderBox error', (tester) async {
+    final controller = PaneManagerController();
+    final firstAlbum = FocusNode(debugLabel: 'First album');
+    addTearDown(controller.dispose);
+    addTearDown(firstAlbum.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: PaneManager(
+                  panes: panes,
+                  selectedIndex: 0,
+                  onSelected: (_) {},
+                  controller: controller,
+                  contentFocusNode: firstAlbum,
+                ),
+              ),
+              PaneManagerContent(
+                controller: controller,
+                child: SliverList(
+                  delegate: SliverChildListDelegate([
+                    TextButton(
+                      focusNode: firstAlbum,
+                      onPressed: () {},
+                      child: const Text('First album'),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Regression: a FocusScope with its default Semantics wrapper inserts
+    // RenderSemanticsAnnotations (RenderBox) above RenderSliver and crashes.
+    expect(tester.takeException(), isNull);
+    tester.widget<InkWell>(find.byKey(const ValueKey('pane-0'))).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(firstAlbum.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.goBack);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(controller.isInContent, isFalse);
+  });
+
   testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
     final semantics = tester.ensureSemantics();
     addTearDown(semantics.dispose);
