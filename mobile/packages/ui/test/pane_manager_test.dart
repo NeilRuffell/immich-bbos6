@@ -30,7 +30,100 @@ class _PaneBackTestDelegate extends RouterDelegate<Object> with ChangeNotifier {
   }
 }
 
+class _PinnedPaneTestHeader extends SliverPersistentHeaderDelegate {
+  _PinnedPaneTestHeader(this.child);
+
+  final Widget child;
+
+  @override
+  double get minExtent => PaneManager.height;
+
+  @override
+  double get maxExtent => PaneManager.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => child;
+
+  @override
+  bool shouldRebuild(covariant _PinnedPaneTestHeader oldDelegate) => oldDelegate.child != child;
+}
+
 void main() {
+  testWidgets('upward focus traversal scrolls a pane-owned SliverList above a pinned header', (tester) async {
+    final controller = PaneManagerController();
+    final scrollController = ScrollController();
+    final rows = List.generate(20, (index) => FocusNode(debugLabel: 'Item $index'));
+
+    addTearDown(controller.dispose);
+    addTearDown(scrollController.dispose);
+    for (final node in rows) {
+      addTearDown(node.dispose);
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 500,
+            child: CustomScrollView(
+              controller: scrollController,
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedPaneTestHeader(
+                    PaneManager(
+                      panes: panes,
+                      selectedIndex: 0,
+                      onSelected: (_) {},
+                      controller: controller,
+                      contentFocusNode: rows[0],
+                    ),
+                  ),
+                ),
+                PaneManagerContent(
+                  controller: controller,
+                  child: SliverList.builder(
+                    itemCount: rows.length,
+                    itemBuilder: (context, index) => SizedBox(
+                      height: 74,
+                      child: TextButton(
+                        focusNode: rows[index],
+                        onPressed: () {},
+                        child: Text('Item $index'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    scrollController.jumpTo(240);
+    await tester.pump();
+    expect(rows[4].context, isNotNull);
+    expect(rows[2].context, isNotNull);
+
+    rows[4].requestFocus();
+    await tester.pump();
+    expect(controller.isInContent, isTrue);
+    final initialOffset = scrollController.offset;
+
+    // Item 2 is still mounted in the sliver cache but is above the
+    // visible content. Focus must move the list back upward automatically.
+    rows[2].requestFocus();
+    await tester.pump();
+
+    expect(rows[2].hasPrimaryFocus, isTrue);
+    expect(scrollController.offset, lessThan(initialOffset));
+    final paneBottom = tester.getBottomLeft(find.byType(PaneManager)).dy;
+    final focusedTop = tester.getTopLeft(find.text('Item 2')).dy;
+    expect(focusedTop, greaterThanOrEqualTo(paneBottom - 1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('PaneManager has three equal, square panes and uses the shared selection gradient', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

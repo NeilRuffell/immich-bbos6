@@ -74,9 +74,239 @@ class PaneManagerContent extends StatelessWidget {
       // Back is handled only by PaneManager's BackButtonListener below.
       // Also intercepting a physical Back key here changes focus before
       // Android dispatches its route pop and can make one press pop twice.
-      child: child,
+      child: _PaneContentFocusScrollSync(
+        controller: controller,
+        child: kDebugMode ? _PaneContentScrollTrace(controller: controller, child: child) : child,
+      ),
     );
   }
+}
+
+/// Keeps keyboard/trackpad focus visible within the PaneManager-owned
+/// Scrollable, including when moving upward behind a pinned pane header.
+/// This wrapper is safe for RenderSliver children: it creates no RenderBox.
+class _PaneContentFocusScrollSync extends StatefulWidget {
+  const _PaneContentFocusScrollSync({required this.controller, required this.child});
+
+  final PaneManagerController controller;
+  final Widget child;
+
+  @override
+  State<_PaneContentFocusScrollSync> createState() => _PaneContentFocusScrollSyncState();
+}
+
+class _PaneContentFocusScrollSyncState extends State<_PaneContentFocusScrollSync> {
+  ScrollableState? _scrollable;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_keepFocusedItemVisible);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scrollable = Scrollable.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_keepFocusedItemVisible);
+    super.dispose();
+  }
+
+  void _keepFocusedItemVisible() {
+    if (!widget.controller.contentScope.hasFocus) {
+      return;
+    }
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    final scrollable = _scrollable;
+    if (focusedContext == null || scrollable == null || Scrollable.maybeOf(focusedContext) != scrollable) {
+      return;
+    }
+
+    final position = scrollable.position;
+    final focusedRender = focusedContext.findRenderObject();
+    final viewportRender = scrollable.context.findRenderObject();
+    if (!position.hasPixels ||
+        !position.hasContentDimensions ||
+        focusedRender is! RenderBox ||
+        !focusedRender.attached ||
+        !focusedRender.hasSize ||
+        viewportRender is! RenderBox ||
+        !viewportRender.attached ||
+        !viewportRender.hasSize ||
+        viewportRender.size.height <= 0) {
+      return;
+    }
+
+    final viewportTop = viewportRender.localToGlobal(Offset.zero).dy;
+    final viewportBottom = viewportTop + viewportRender.size.height;
+    var visibleTop = viewportTop;
+
+    // The pane bar can be pinned over the Scrollable's viewport. Account
+    // for its actual rendered bottom rather than hardcoding an Albums offset.
+    final paneRender = widget.controller.paneScope.context?.findRenderObject();
+    if (paneRender is RenderBox && paneRender.attached && paneRender.hasSize) {
+      final paneBottom = paneRender.localToGlobal(Offset(0, paneRender.size.height)).dy;
+      if (paneBottom > visibleTop && paneBottom < viewportBottom) {
+        visibleTop = paneBottom;
+      }
+    }
+
+    final focusedTop = focusedRender.localToGlobal(Offset.zero).dy;
+    if (focusedTop >= visibleTop - 0.5) {
+      return; // Do not interfere with Flutter's working downward scrolling.
+    }
+
+    // Scroll just enough to put the focused row below any pinned pane header.
+    // The viewport computes the reveal offset for slivers and regular lists.
+    final alignment = ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0).toDouble();
+    position.ensureVisible(focusedRender, alignment: alignment);
+    if (kDebugMode) {
+      debugPrint(
+        'BBOS6-PaneScroll: focus.reveal-up '
+        'focus=${FocusManager.instance.primaryFocus?.debugLabel ?? "none"} '
+        'visibleTop=${visibleTop.toStringAsFixed(1)} '
+        'itemTop=${focusedTop.toStringAsFixed(1)} '
+        'scrollPixels=${position.pixels.toStringAsFixed(1)}',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Debug-only observer. It is omitted from profile and release widget trees.
+/// Neither its focus listener nor its scroll listener changes navigation.
+class _PaneContentScrollTrace extends StatefulWidget {
+  const _PaneContentScrollTrace({required this.controller, required this.child});
+
+  final PaneManagerController controller;
+  final Widget child;
+
+  @override
+  State<_PaneContentScrollTrace> createState() => _PaneContentScrollTraceState();
+}
+
+class _PaneContentScrollTraceState extends State<_PaneContentScrollTrace> {
+  ScrollableState? _scrollable;
+  ScrollPosition? _position;
+  bool _wasInContent = false;
+  double? _lastLoggedScrollOffset;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scrollable = Scrollable.maybeOf(context);
+    final position = scrollable?.position;
+    if (!identical(_position, position)) {
+      _position?.removeListener(_onScrollChanged);
+      _position = position;
+      _position?.addListener(_onScrollChanged);
+      _lastLoggedScrollOffset = null;
+    }
+    _scrollable = scrollable;
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocusChanged);
+    _position?.removeListener(_onScrollChanged);
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    final inContent = widget.controller.contentScope.hasFocus;
+    if (!inContent && !_wasInContent) {
+      return;
+    }
+    _wasInContent = inContent;
+    _trace(inContent ? 'focus.changed' : 'focus.left');
+
+    if (inContent) {
+      final focusedNode = FocusManager.instance.primaryFocus;
+      // Check the scroll offset again after any implicit focus scrolling.
+      Future<void>.delayed(const Duration(milliseconds: 150), () {
+        if (mounted &&
+            widget.controller.contentScope.hasFocus &&
+            identical(FocusManager.instance.primaryFocus, focusedNode)) {
+          _trace('focus.after-150ms');
+        }
+      });
+    }
+  }
+
+  void _onScrollChanged() {
+    if (!widget.controller.contentScope.hasFocus) {
+      return;
+    }
+    final position = _position;
+    if (position == null || !position.hasPixels) {
+      return;
+    }
+    final pixels = position.pixels;
+    if (_lastLoggedScrollOffset != null && (pixels - _lastLoggedScrollOffset!).abs() < 20) {
+      return;
+    }
+    _lastLoggedScrollOffset = pixels;
+    _trace('scroll.changed');
+  }
+
+  void _trace(String stage) {
+    if (!kDebugMode) {
+      return;
+    }
+    final focus = FocusManager.instance.primaryFocus;
+    final position = _position;
+    final offset = position != null && position.hasPixels ? position.pixels.toStringAsFixed(1) : 'unavailable';
+    final maxOffset = position != null && position.hasContentDimensions
+        ? position.maxScrollExtent.toStringAsFixed(1)
+        : 'unavailable';
+    final focusObject = focus?.context?.findRenderObject();
+    final viewportObject = _scrollable?.context.findRenderObject();
+
+    var geometry = 'itemY=unavailable viewportY=unavailable visibility=unknown';
+    if (focusObject is RenderBox &&
+        viewportObject is RenderBox &&
+        focusObject.attached &&
+        viewportObject.attached &&
+        focusObject.hasSize &&
+        viewportObject.hasSize) {
+      final itemTop = focusObject.localToGlobal(Offset.zero).dy;
+      final itemBottom = itemTop + focusObject.size.height;
+      final viewportTop = viewportObject.localToGlobal(Offset.zero).dy;
+      final viewportBottom = viewportTop + viewportObject.size.height;
+      final visibility = itemBottom <= viewportTop
+          ? 'above'
+          : itemTop >= viewportBottom
+          ? 'below'
+          : 'intersects';
+      geometry =
+          'itemY=${itemTop.toStringAsFixed(1)}..${itemBottom.toStringAsFixed(1)} '
+          'viewportY=${viewportTop.toStringAsFixed(1)}..${viewportBottom.toStringAsFixed(1)} '
+          'visibility=$visibility';
+    }
+
+    debugPrint(
+      'BBOS6-PaneScroll: $stage '
+      'inContent=${widget.controller.contentScope.hasFocus} '
+      'focus=${focus?.debugLabel ?? "none"} '
+      'focusId=${focus == null ? "none" : identityHashCode(focus)} '
+      'scrollPixels=$offset maxScroll=$maxOffset $geometry',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 
