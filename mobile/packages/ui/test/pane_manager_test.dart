@@ -39,51 +39,9 @@ void main() {
     expect(all, shared);
   });
 
-  testWidgets('touch activates a pane, and reactivation can focus content', (tester) async {
+  testWidgets('touch commits selection and helper focuses the content target', (tester) async {
     var selected = 0;
     final changes = <int>[];
-    final activations = <int>[];
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: StatefulBuilder(
-          builder: (context, setState) => Scaffold(
-            body: PaneManager(
-              panes: panes,
-              selectedIndex: selected,
-              onSelected: (index) {
-                changes.add(index);
-                setState(() => selected = index);
-              },
-              onActivated: activations.add,
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Shared'));
-    await tester.pump();
-    expect(selected, 1);
-    expect(changes, [1]);
-    expect(activations, [1]);
-
-    await tester.tap(find.text('Shared'));
-    await tester.pump();
-    expect(changes, [1]); // Already selected: no redundant content change.
-    expect(activations, [1, 1]); // Still transfers focus into its list.
-
-    await tester.tap(find.text('My Albums'));
-    await tester.pump();
-    expect(selected, 2);
-    expect(changes, [1, 2]);
-    expect(activations, [1, 1, 2]);
-  });
-
-  testWidgets('left/right only highlight; Enter commits and transfers focus to content', (tester) async {
-    var selected = 0;
-    final changes = <int>[];
-    final activations = <int>[];
     final contentFocus = FocusNode(debugLabel: 'Album list');
     addTearDown(contentFocus.dispose);
 
@@ -100,10 +58,54 @@ void main() {
                     changes.add(index);
                     setState(() => selected = index);
                   },
-                  onActivated: (index) {
-                    activations.add(index);
-                    contentFocus.requestFocus();
+                  contentFocusNode: contentFocus,
+                ),
+                TextButton(focusNode: contentFocus, onPressed: () {}, child: const Text('First album')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Shared'));
+    await tester.pump();
+    expect(selected, 1);
+    expect(changes, [1]);
+    expect(contentFocus.hasFocus, isTrue);
+
+    await tester.tap(find.text('Shared'));
+    await tester.pump();
+    expect(changes, [1]); // No duplicate selection event.
+    expect(contentFocus.hasFocus, isTrue); // Still enters content.
+
+    await tester.tap(find.text('My Albums'));
+    await tester.pump();
+    expect(selected, 2);
+    expect(changes, [1, 2]);
+    expect(contentFocus.hasFocus, isTrue);
+  });
+
+  testWidgets('arrows move highlight only; Enter and Select activate and enter content', (tester) async {
+    var selected = 0;
+    final changes = <int>[];
+    final contentFocus = FocusNode(debugLabel: 'Album list');
+    addTearDown(contentFocus.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            body: Column(
+              children: [
+                PaneManager(
+                  panes: panes,
+                  selectedIndex: selected,
+                  onSelected: (index) {
+                    changes.add(index);
+                    setState(() => selected = index);
                   },
+                  contentFocusNode: contentFocus,
                 ),
                 TextButton(focusNode: contentFocus, onPressed: () {}, child: const Text('First album')),
               ],
@@ -118,8 +120,9 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
-    expect(selected, 0); // No view change from horizontal highlight movement.
+    expect(selected, 0);
     expect(changes, isEmpty);
+    expect(contentFocus.hasFocus, isFalse);
     expect(tester.widget<InkWell>(find.byKey(const ValueKey('pane-1'))).focusNode!.hasFocus, isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -130,24 +133,19 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
-    expect(changes, isEmpty); // Right boundary is contained within pane bar.
+    expect(changes, isEmpty); // Horizontal boundary never changes the view.
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(selected, 2);
     expect(changes, [2]);
-    expect(activations, [2]);
     expect(contentFocus.hasFocus, isTrue);
-
-    // The chosen pane remains selected while the focus is in the list.
-    expect(tester.widget<InkWell>(find.byKey(const ValueKey('pane-2'))).focusNode!.hasFocus, isFalse);
 
     tester.widget<InkWell>(find.byKey(const ValueKey('pane-2'))).focusNode!.requestFocus();
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(changes, [2]); // Already selected, but still entered the list.
-    expect(activations, [2, 2]);
+    expect(changes, [2]); // Re-activation enters content without filtering.
     expect(contentFocus.hasFocus, isTrue);
 
     tester.widget<InkWell>(find.byKey(const ValueKey('pane-1'))).focusNode!.requestFocus();
@@ -156,7 +154,6 @@ void main() {
     await tester.pump();
     expect(selected, 1);
     expect(changes, [2, 1]);
-    expect(activations, [2, 2, 1]);
     expect(contentFocus.hasFocus, isTrue);
   });
 
