@@ -71,6 +71,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
                     onMemories: () => context.pushRoute(const MemoryListRoute()),
                     onPlaces: () => context.pushRoute(PlaceRoute(currentLocation: null)),
                     onPeople: () => context.pushRoute(const PeopleCollectionRoute()),
+                    onSettings: () => context.pushRoute(const SettingsRoute()),
                   )
                 : child,
           ),
