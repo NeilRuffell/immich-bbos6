@@ -4,10 +4,11 @@ import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 
 @immutable
 class PaneManagerItem {
-  const PaneManagerItem({required this.label, this.icon});
+  const PaneManagerItem({required this.label, this.icon, this.showLabel = true}) : assert(label.length > 0);
 
   final String label;
   final Widget? icon;
+  final bool showLabel;
 }
 
 /// A reusable BBOS6-inspired horizontal pane selector.
@@ -118,6 +119,7 @@ class _PaneManagerState extends State<PaneManager> {
               for (var index = 0; index < widget.panes.length; index++)
                 Expanded(
                   child: Semantics(
+                    label: widget.panes[index].showLabel ? null : widget.panes[index].label,
                     button: true,
                     selected: widget.selectedIndex == index,
                     child: InkWell(
@@ -165,9 +167,9 @@ class _PaneManagerState extends State<PaneManager> {
                                     data: const IconThemeData(color: Colors.white, size: 20),
                                     child: widget.panes[index].icon!,
                                   ),
-                                if (widget.panes[index].icon != null && widget.panes[index].label.isNotEmpty)
+                                if (widget.panes[index].icon != null && widget.panes[index].showLabel)
                                   const SizedBox(width: 5),
-                                if (widget.panes[index].label.isNotEmpty)
+                                if (widget.panes[index].showLabel)
                                   Flexible(
                                     child: Text(
                                       widget.panes[index].label,
