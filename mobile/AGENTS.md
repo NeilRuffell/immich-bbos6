@@ -2,6 +2,36 @@
 
 Flutter app with Riverpod, Drift (SQLite), auto_route, pigeon and a Rust core in `../native/`.
 
+## Mandatory rule: shared helpers own shared behavior
+
+**Before editing a screen, determine whether the requested behavior or appearance
+belongs to an existing reusable helper. If it does, change the helper itself.**
+This rule applies to *every* shared BBOS6 component, even when it currently has
+only one consumer. Do not special-case the current screen (for example, Albums)
+when the user asks to change the helper (for example, PaneManager).
+
+- Shared helpers own interaction rules, focus and traversal boundaries, keyboard
+  and trackpad handling, activation/selection state transitions, Back behavior,
+  and reusable visual styling. Implement these **once** in the shared component
+  under `packages/ui/lib/src/components/bbos6/`.
+- A consuming page supplies only page-specific data, configuration, the
+  content/focus target, and business-action callbacks. It should not reproduce
+  shared control logic with local key listeners, navigation handlers, or
+  page-specific hacks. Use configuration or interfaces only where necessary to
+  connect the helper to a page's data/route system.
+- Check all existing uses and treat new behavior as the **default for all
+  instances** of that helper. Do not silently retain inconsistent legacy
+  behavior in other consumers.
+- Test the shared helper's contract independently, then regression-test every
+  affected consumer (including focus, Back, touch, physical trackpad, list/grid,
+  empty content, and sliver layouts where applicable).
+- Only add a page-specific behavior when explicitly requested or when genuinely
+  intrinsic to that page's own data/actions; document the exception and keep
+  generic logic out of the page.
+
+Reference: [BBOS6 presentation architecture](docs/BBOS6_PRESENTATION_ARCHITECTURE.md)
+and [PaneManager behavior](docs/BBOS6_ALBUMS_PANE_MANAGER.md).
+
 ## BBOS6 presentation-only fork policy
 
 Before editing this fork's mobile appearance, read [BBOS6 presentation architecture](docs/BBOS6_PRESENTATION_ARCHITECTURE.md).
