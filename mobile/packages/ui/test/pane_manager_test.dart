@@ -106,6 +106,52 @@ void main() {
     expect(contentFocus.hasFocus, isTrue);
   });
 
+  testWidgets('reselecting the first pane schedules its focus handoff without another input', (tester) async {
+    final controller = PaneManagerController();
+    final first = FocusNode(debugLabel: 'First content row');
+    addTearDown(controller.dispose);
+    addTearDown(first.dispose);
+
+    var selectionChanges = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              PaneManager(
+                panes: panes,
+                selectedIndex: 0,
+                onSelected: (_) => selectionChanges++,
+                controller: controller,
+                contentFocusNode: first,
+              ),
+              PaneManagerContent(
+                controller: controller,
+                child: TextButton(focusNode: first, onPressed: () {}, child: const Text('First row')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final firstPane = tester.widget<InkWell>(find.byKey(const ValueKey('pane-0'))).focusNode!;
+    firstPane.requestFocus();
+    await tester.pumpAndSettle();
+    expect(firstPane.hasPrimaryFocus, isTrue);
+    expect(first.hasFocus, isFalse);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    expect(selectionChanges, 0); // No selection change to rebuild the page.
+    expect(tester.binding.hasScheduledFrame, isTrue); // Activation must schedule the focus handoff.
+
+    await tester.pump();
+    expect(first.hasPrimaryFocus, isTrue);
+    expect(controller.isInContent, isTrue);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+  });
+
   testWidgets('arrows move highlight only; Enter and Select activate and enter content', (tester) async {
     var selected = 0;
     final changes = <int>[];

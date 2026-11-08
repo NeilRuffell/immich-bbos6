@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
@@ -173,17 +174,37 @@ class _PaneManagerState extends State<PaneManager> {
     super.dispose();
   }
 
+  // Only available in debug APKs. Compiled out of release/profile builds.
+  void _traceFocus(String stage, {int? paneIndex, FocusNode? destination}) {
+    if (!kDebugMode) {
+      return;
+    }
+    final focusedIndex = _nodes.indexWhere((node) => node.hasFocus);
+    final primary = FocusManager.instance.primaryFocus;
+    debugPrint(
+      'BBOS6-PaneManager: $stage '
+      'pane=$paneIndex selected=${widget.selectedIndex} focusedPane=$focusedIndex '
+      'targetSupplied=${destination != null} targetAttached=${destination?.context != null} '
+      'targetCanRequestFocus=${destination?.canRequestFocus} '
+      'targetHasFocus=${destination?.hasFocus} '
+      'contentScopeHasFocus=${widget.controller?.contentScope.hasFocus} '
+      'primaryFocus=${primary?.debugLabel ?? primary?.runtimeType.toString() ?? "none"}',
+    );
+  }
+
   void _focusPane(int index) {
     _nodes[index].requestFocus();
   }
 
-  void _activatePane(int index) {
+  void _activatePane(int index, {required String source}) {
+    _traceFocus('activate.start source=$source', paneIndex: index, destination: widget.contentFocusNode);
     _focusPane(index);
     if (index != widget.selectedIndex) {
       widget.onSelected(index);
     }
     final destination = widget.contentFocusNode;
     if (destination == null) {
+      _traceFocus('activate.no-content-target', paneIndex: index);
       return;
     }
 
@@ -193,11 +214,29 @@ class _PaneManagerState extends State<PaneManager> {
     if (scrollable != null && scrollable.position.hasPixels) {
       scrollable.position.jumpTo(scrollable.position.minScrollExtent);
     }
+    _traceFocus('activate.scheduled', paneIndex: index, destination: destination);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _traceFocus('activate.post-frame', paneIndex: index, destination: destination);
       if (mounted && destination.context != null) {
         destination.requestFocus();
+        _traceFocus('activate.requested-focus', paneIndex: index, destination: destination);
+      } else {
+        _traceFocus('activate.target-unavailable', paneIndex: index, destination: destination);
+      }
+      // Focus requests are committed asynchronously. Observe the resulting
+      // primary focus without introducing any timing change in release builds.
+      if (kDebugMode) {
+        Future<void>.delayed(Duration.zero, () {
+          if (mounted) {
+            _traceFocus('activate.after-focus-update', paneIndex: index, destination: destination);
+          }
+        });
       }
     });
+    // addPostFrameCallback alone does not request a frame. Activating the
+    // already-selected pane doesn't call onSelected or rebuild the page.
+    // Explicitly schedule the frame needed for the focus handoff.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -228,7 +267,7 @@ class _PaneManagerState extends State<PaneManager> {
     if (event.logicalKey == LogicalKeyboardKey.select ||
         event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-      _activatePane(focused);
+      _activatePane(focused, source: 'key:${event.logicalKey.keyLabel}');
       return KeyEventResult.handled;
     }
 
@@ -274,8 +313,9 @@ class _PaneManagerState extends State<PaneManager> {
                         } else if (_focusedIndex == index) {
                           setState(() => _focusedIndex = null);
                         }
+                        _traceFocus('pane.focus-changed=$focused', paneIndex: index, destination: widget.contentFocusNode);
                       },
-                      onTap: () => _activatePane(index),
+                      onTap: () => _activatePane(index, source: 'tap'),
                       hoverColor: Colors.transparent,
                       focusColor: Colors.transparent,
                       highlightColor: Colors.transparent,
