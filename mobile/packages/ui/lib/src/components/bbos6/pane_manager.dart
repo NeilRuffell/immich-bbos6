@@ -66,6 +66,10 @@ class PaneManagerContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return FocusScope(
       node: controller.contentScope,
+      // The child may be a RenderSliver. FocusScope's default Semantics
+      // inserts a RenderBox, which is invalid directly above slivers.
+      // Disabling only this wrapper's semantics preserves content semantics.
+      includeSemantics: false,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) {
           return KeyEventResult.ignored;
