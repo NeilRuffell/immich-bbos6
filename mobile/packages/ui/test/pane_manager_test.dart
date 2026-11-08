@@ -149,6 +149,15 @@ void main() {
     expect(changes, [2]); // Already selected, but still entered the list.
     expect(activations, [2, 2]);
     expect(contentFocus.hasFocus, isTrue);
+
+    tester.widget<InkWell>(find.byKey(const ValueKey('pane-1'))).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(selected, 1);
+    expect(changes, [2, 1]);
+    expect(activations, [2, 2, 1]);
+    expect(contentFocus.hasFocus, isTrue);
   });
 
   testWidgets('icon-only panes retain accessible labels and keyboard focus', (tester) async {
