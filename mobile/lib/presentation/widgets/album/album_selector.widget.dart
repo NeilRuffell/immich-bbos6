@@ -30,6 +30,13 @@ import 'package:sliver_tools/sliver_tools.dart';
 
 typedef AlbumSelectorCallback = void Function(RemoteAlbum album);
 
+// Explicit mapping keeps the pane order independent of enum declaration order.
+const _albumPaneFilters = [
+  QuickFilterMode.all,
+  QuickFilterMode.sharedWithMe,
+  QuickFilterMode.myAlbums,
+];
+
 class AlbumSelector extends ConsumerStatefulWidget {
   final AlbumSelectorCallback onAlbumSelected;
   final Function? onKeyboardExpanded;
@@ -198,8 +205,8 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
             delegate: _AlbumPaneHeaderDelegate(
               child: PaneManager(
                 labels: [context.t.all, 'Shared', context.t.my_albums],
-                selectedIndex: filter.mode.index,
-                onSelected: (index) => changeFilter(QuickFilterMode.values[index]),
+                selectedIndex: _albumPaneFilters.indexOf(filter.mode),
+                onSelected: (index) => changeFilter(_albumPaneFilters[index]),
                 autofocus: true,
               ),
             ),
