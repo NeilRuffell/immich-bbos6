@@ -84,12 +84,16 @@ class _PaneManagerState extends State<PaneManager> {
       return KeyEventResult.ignored;
     }
 
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft && focused > 0) {
-      _select(focused - 1);
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      if (focused > 0) {
+        _select(focused - 1);
+      }
       return KeyEventResult.handled;
     }
-    if (event.logicalKey == LogicalKeyboardKey.arrowRight && focused < _nodes.length - 1) {
-      _select(focused + 1);
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      if (focused < _nodes.length - 1) {
+        _select(focused + 1);
+      }
       return KeyEventResult.handled;
     }
 
