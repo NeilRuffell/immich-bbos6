@@ -20,3 +20,17 @@ Widget previewBbos6PaneManager() {
     ),
   );
 }
+
+@ImmichPreview(group: 'BBOS6', name: 'Pane manager icon-only')
+Widget previewBbos6IconPanes() => SizedBox(
+  width: 340,
+  child: PaneManager(
+    panes: const [
+      PaneManagerItem(label: 'Camera', icon: Icon(Icons.camera_alt_outlined), showLabel: false),
+      PaneManagerItem(label: 'Gallery', icon: Icon(Icons.photo_library_outlined), showLabel: false),
+      PaneManagerItem(label: 'Settings', icon: Icon(Icons.settings_outlined), showLabel: false),
+    ],
+    selectedIndex: 0,
+    onSelected: (_) {},
+  ),
+);
