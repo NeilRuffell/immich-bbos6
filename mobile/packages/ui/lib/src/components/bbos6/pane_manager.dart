@@ -324,6 +324,7 @@ class PaneManagerItem {
     required this.label,
     this.icon,
     this.showLabel = true,
+    this.semanticLabel,
     this.flex = 1,
     this.labelFontSize = 14,
     this.onActivate,
@@ -334,6 +335,7 @@ class PaneManagerItem {
   final String label;
   final Widget? icon;
   final bool showLabel;
+  final String? semanticLabel;
 
   final int flex;
   final double labelFontSize;
@@ -558,7 +560,8 @@ class _PaneManagerState extends State<PaneManager> {
                 Expanded(
                   flex: widget.panes[index].flex,
                   child: Semantics(
-                    label: widget.panes[index].showLabel ? null : widget.panes[index].label,
+                    label: widget.panes[index].semanticLabel ??
+                        (widget.panes[index].showLabel ? null : widget.panes[index].label),
                     button: true,
                     selected: widget.selectedIndex == index,
                     child: InkWell(
