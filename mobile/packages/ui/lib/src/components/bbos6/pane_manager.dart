@@ -110,6 +110,15 @@ class _PaneManagerState extends State<PaneManager> {
       return KeyEventResult.handled;
     }
 
+    // Android D-pad centre/trackpad click can map to Select rather than Enter.
+    // InkWell also handles keyboard activation where Flutter supplies it.
+    if (event.logicalKey == LogicalKeyboardKey.select ||
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      _activatePane(focused);
+      return KeyEventResult.handled;
+    }
+
     // Keep Up/Down available to Flutter's normal focus traversal so the album
     // list and other controls remain reachable by the Q25 trackpad.
     return KeyEventResult.ignored;
