@@ -54,7 +54,7 @@ class AlbumSelectorState extends ConsumerState<AlbumSelector> {
   bool _searchVisible = false;
 
   /// PaneManager owns the selection gesture; Albums owns its content focus.
-  void _focusActiveAlbums(int index) {
+  void _focusActiveAlbums(int _) {
     // Reveal the first item before requesting focus (sliver children are lazy).
     final scrollable = Scrollable.maybeOf(context);
     if (scrollable != null && scrollable.position.hasPixels) {
@@ -648,11 +648,11 @@ class _AlbumList extends ConsumerWidget {
             );
           } else {
             return AlbumTile(
-                album: album,
-                isOwner: isOwner,
-                onAlbumSelected: onAlbumSelected,
-                focusNode: index == 0 ? firstItemFocusNode : null,
-              );
+              album: album,
+              isOwner: isOwner,
+              onAlbumSelected: onAlbumSelected,
+              focusNode: index == 0 ? firstItemFocusNode : null,
+            );
           }
         },
         itemCount: albums.length,
