@@ -9,7 +9,11 @@ Widget previewBbos6PaneManager() {
     builder: (context, setState) => SizedBox(
       width: 340,
       child: PaneManager(
-        labels: const ['All', 'Shared', 'My Albums'],
+        panes: const [
+          PaneManagerItem(label: 'All'),
+          PaneManagerItem(label: 'Shared'),
+          PaneManagerItem(label: 'My Albums'),
+        ],
         selectedIndex: selected,
         onSelected: (index) => setState(() => selected = index),
       ),
