@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:immich_ui/immich_ui.dart';
+import 'package:immich_mobile/widgets/common/immich_logo.dart';
 
 /// BBOS6-inspired Pictures landing screen.
 ///
@@ -31,7 +32,14 @@ class Bbos6PicturesHome extends StatelessWidget {
       backgroundColor: Colors.black,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Pictures'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ImmichLogo(size: 28),
+            SizedBox(width: 8),
+            Text('Immich'),
+          ],
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
