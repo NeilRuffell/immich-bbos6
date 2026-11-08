@@ -38,8 +38,14 @@ The widget receives **pane models** (label and optional icon, including icon-onl
 - Selected pane uses the **existing shared BBOS6 selection gradient** rather
   than a duplicate palette.
 - White focus border visually distinguishes physical-input focus from the
-  selected pane. The focused segment responds to Left/Right by selecting its
-  neighbors; activating an item via trackpad Enter or touch also works.
+  selected (blue-gradient) pane. Left/Right moves that focus border without
+  changing the selected pane or its album results. Only trackpad click/Enter
+  or touch activates the highlighted pane. The shared `onSelected` callback
+  runs only when the selection changes; `onActivated` runs for every click,
+  including an already-selected pane, so the parent can focus its content.
+- After an Albums pane is activated, focus transfers to the first item in
+  its filtered list or grid; an empty pane's status message remains focusable.
+  Album data, filtering, routing and sort behavior are unchanged.
 - Up/Down is not swallowed: Flutter's standard directional focus navigation is
   preserved for the other controls and album content.
 - The bar is pinned via `SliverPersistentHeader` within `MultiSliver`
@@ -55,7 +61,10 @@ established visual and interaction contract through a separate native renderer.
 
 1. Open **Immich → Albums**: the top selector reads **All | Shared | My Albums**.
 2. Confirm the album list matches the original filters for each selection.
-3. Test pressing Left/Right with a focused pane, and tap the panes by touch.
+3. Test pressing Left/Right: only the white focus border moves, not the
+   selected blue pane and not the album results. Press the trackpad to commit
+   the highlighted pane; focus should jump into the first album row. Repeat
+   by clicking the current pane and while Grid mode is enabled.
 4. Scroll a long list: the pane bar should remain visible under the page header.
 5. Confirm Search, Grid/List, Sorting, Open Album, Create Album and delete
    confirmation still work as before.
