@@ -333,7 +333,9 @@ class _PaneManagerState extends State<PaneManager> {
       child: paneBar,
     );
     final controller = widget.controller;
-    if (controller == null) {
+    // BackButtonListener requires a Router with a BackButtonDispatcher.
+    // Widget previews/tests without a Router retain the scope-only behavior.
+    if (controller == null || Router.maybeOf(context)?.backButtonDispatcher == null) {
       return scopedBar;
     }
     // Consumes Android system Back while the owned list has focus. When
