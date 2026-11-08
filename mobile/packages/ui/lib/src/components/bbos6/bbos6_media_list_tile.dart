@@ -85,8 +85,8 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                             widget.subtitle!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFFB3C1CE),
+                            style: TextStyle(
+                              color: _focused ? const Color(0xFFEDF4FF) : const Color(0xFFB3C1CE),
                               fontSize: Bbos6MediaListTile.subtitleSize,
                             ),
                           ),
@@ -97,7 +97,10 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                 if (widget.trailing != null)
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
-                    child: widget.trailing!,
+                    child: IconTheme(
+                      data: const IconThemeData(color: Colors.white),
+                      child: widget.trailing!,
+                    ),
                   ),
               ],
             ),
