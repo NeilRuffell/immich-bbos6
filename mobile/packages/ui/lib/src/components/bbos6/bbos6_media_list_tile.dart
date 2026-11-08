@@ -9,6 +9,7 @@ class Bbos6MediaListTile extends StatefulWidget {
     this.subtitle,
     this.trailing,
     this.focusNode,
+    this.autofocus = false,
     this.showDivider = true,
     super.key,
   });
@@ -21,8 +22,9 @@ class Bbos6MediaListTile extends StatefulWidget {
   final String? subtitle;
   final Widget? leading;
   final Widget? trailing;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final FocusNode? focusNode;
+  final bool autofocus;
   final bool showDivider;
 
   @override
@@ -48,6 +50,7 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
           type: MaterialType.transparency,
           child: InkWell(
             focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
             onFocusChange: (focused) => setState(() => _focused = focused),
             onTap: widget.onTap,
             hoverColor: Colors.transparent,
@@ -62,7 +65,7 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                     height: Bbos6MediaListTile.rowHeight,
                     child: Center(
                       child: IconTheme(
-                        data: const IconThemeData(color: Colors.white),
+                        data: IconThemeData(color: widget.onTap == null ? const Color(0xFF777777) : Colors.white),
                         child: widget.leading!,
                       ),
                     ),
@@ -78,7 +81,10 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                           widget.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: Bbos6MediaListTile.titleSize),
+                          style: TextStyle(
+                            color: widget.onTap == null ? const Color(0xFF777777) : Colors.white,
+                            fontSize: Bbos6MediaListTile.titleSize,
+                          ),
                         ),
                         if (widget.subtitle != null)
                           Text(
@@ -86,7 +92,11 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: _focused ? const Color(0xFFEDF4FF) : const Color(0xFFB3C1CE),
+                              color: widget.onTap == null
+                                  ? const Color(0xFF777777)
+                                  : _focused
+                                  ? const Color(0xFFEDF4FF)
+                                  : const Color(0xFFB3C1CE),
                               fontSize: Bbos6MediaListTile.subtitleSize,
                             ),
                           ),
@@ -98,7 +108,7 @@ class _Bbos6MediaListTileState extends State<Bbos6MediaListTile> {
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: IconTheme(
-                      data: const IconThemeData(color: Colors.white),
+                      data: IconThemeData(color: widget.onTap == null ? const Color(0xFF777777) : Colors.white),
                       child: widget.trailing!,
                     ),
                   ),
