@@ -204,7 +204,11 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
             pinned: true,
             delegate: _AlbumPaneHeaderDelegate(
               child: PaneManager(
-                labels: [context.t.all, 'Shared', context.t.my_albums],
+                panes: [
+                  PaneManagerItem(label: context.t.all),
+                  const PaneManagerItem(label: 'Shared'),
+                  PaneManagerItem(label: context.t.my_albums),
+                ],
                 selectedIndex: _albumPaneFilters.indexOf(filter.mode),
                 onSelected: (index) => changeFilter(_albumPaneFilters[index]),
                 autofocus: true,
