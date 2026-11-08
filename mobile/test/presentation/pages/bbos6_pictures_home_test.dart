@@ -11,6 +11,7 @@ const labels = [
   'Memories',
   'Places',
   'People',
+  'Settings',
 ];
 
 Widget buildHome(List<String> selected, {bool readonly = false}) {
@@ -23,17 +24,21 @@ Widget buildHome(List<String> selected, {bool readonly = false}) {
       onMemories: () => selected.add('Memories'),
       onPlaces: () => selected.add('Places'),
       onPeople: () => selected.add('People'),
+      onSettings: () => selected.add('Settings'),
     ),
   );
 }
 
 void main() {
-  testWidgets('Pictures home has six rows in the requested order and no tab bar', (tester) async {
+  testWidgets('Pictures home has seven rows in the requested order and no tab bar', (tester) async {
     await tester.pumpWidget(buildHome([]));
 
     expect(find.text('Immich'), findsOneWidget);
     expect(find.byType(ImmichLogo), findsOneWidget);
-    expect(find.byType(Bbos6MediaListTile), findsNWidgets(6));
+    expect(find.byType(Bbos6MediaListTile), findsNWidgets(7));
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.centerTitle, isFalse);
+    expect(appBar.titleSpacing, 12);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(NavigationRail), findsNothing);
 
@@ -55,13 +60,15 @@ void main() {
     expect(selected, labels);
   });
 
-  testWidgets('read-only mode retains only Pictures Library as an active entry', (tester) async {
+  testWidgets('read-only mode retains Pictures Library and Settings as active entries', (tester) async {
     await tester.pumpWidget(buildHome([], readonly: true));
 
     final rows = tester.widgetList<Bbos6MediaListTile>(find.byType(Bbos6MediaListTile)).toList();
     expect(rows.first.onTap, isNotNull);
-    for (final row in rows.skip(1)) {
+    for (final row in rows.skip(1).take(5)) {
       expect(row.onTap, isNull);
     }
+    expect(rows.last.title, 'Settings');
+    expect(rows.last.onTap, isNotNull);
   });
 }
