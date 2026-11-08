@@ -97,25 +97,25 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
     );
 
     return Focus(
-      autofocus: true,
+      // PaneManager owns initial focus so its highlight remains visible.
       onKeyEvent: _handleTypeToSearch,
       child: RefreshIndicator(
-      onRefresh: onRefresh,
-      edgeOffset: 100,
-      child: showScrollbar
-          ? RawScrollbar(
-              controller: _scrollController,
-              interactive: true,
-              thickness: 8,
-              radius: const Radius.circular(4),
-              thumbVisibility: false,
-              thumbColor: context.colorScheme.primary,
-              crossAxisMargin: 4,
-              mainAxisMargin: 60,
-              minThumbLength: 40,
-              child: scrollView,
-            )
-          : scrollView,
+        onRefresh: onRefresh,
+        edgeOffset: 100,
+        child: showScrollbar
+            ? RawScrollbar(
+                controller: _scrollController,
+                interactive: true,
+                thickness: 8,
+                radius: const Radius.circular(4),
+                thumbVisibility: false,
+                thumbColor: context.colorScheme.primary,
+                crossAxisMargin: 4,
+                mainAxisMargin: 60,
+                minThumbLength: 40,
+                child: scrollView,
+              )
+            : scrollView,
       ),
     );
   }
