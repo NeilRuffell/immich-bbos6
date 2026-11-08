@@ -29,12 +29,11 @@ yet; their BBOS6 controls are a later task.
 - Preview: `mobile/packages/ui/lib/src/previews/bbos6_pane_manager.dart`
 - Tests: `mobile/packages/ui/test/pane_manager_test.dart`
 
-The widget receives **labels**, an external **selected index**, and an
-**onSelected** callback. It does not know what Immich, albums, or their server are.
+The widget receives **pane models** (label and optional icon, including icon-only display), an external **selected index**, and an **onSelected** callback. It does not know what Immich, albums, or their server are.
 
 ### BBOS6 appearance and input
 
-- One 52dp-high horizontal bar with three equal-width segments in Albums.
+- One 52dp-high horizontal bar with three equal-width text segments in Albums. The shared widget also supports icon or icon-and-label panes.
 - Square edges, grayscale inactive background inspired by the BB Music chrome.
 - Selected pane uses the **existing shared BBOS6 selection gradient** rather
   than a duplicate palette.
