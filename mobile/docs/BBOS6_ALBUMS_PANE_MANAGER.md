@@ -41,10 +41,14 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   selected (blue-gradient) pane. Left/Right moves that focus border without
   changing the selected pane or its album results. Only trackpad click/Enter
   or touch activates the highlighted pane. The shared `onSelected` callback
-  runs only when the selection changes; `onActivated` runs for every click,
-  including an already-selected pane, so the parent can focus its content.
-- After an Albums pane is activated, focus transfers to the first item in
-  its filtered list or grid; an empty pane's status message remains focusable.
+  runs only when the selection changes. The shared `PaneManager` itself
+  transfers focus to its optional `contentFocusNode` on every activation,
+  including clicks on the currently selected pane.
+- After an Albums pane is activated, the helper resets the containing scroll
+  view to its start and transfers focus to the supplied first-row focus node
+  after Flutter rebuilds the selected content. The same node is attached to the
+  first list or grid item (or its empty-state placeholder). Albums provides only
+  that node, not a navigation/focus callback.
   Album data, filtering, routing and sort behavior are unchanged.
 - Up/Down is not swallowed: Flutter's standard directional focus navigation is
   preserved for the other controls and album content.
