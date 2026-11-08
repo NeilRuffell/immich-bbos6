@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:immich_mobile/presentation/pages/bbos6_pictures_home.dart';
 import 'package:immich_ui/immich_ui.dart';
+import 'package:immich_mobile/widgets/common/immich_logo.dart';
 
 const labels = [
   'Pictures Library',
@@ -30,7 +31,8 @@ void main() {
   testWidgets('Pictures home has six rows in the requested order and no tab bar', (tester) async {
     await tester.pumpWidget(buildHome([]));
 
-    expect(find.text('Pictures'), findsOneWidget);
+    expect(find.text('Immich'), findsOneWidget);
+    expect(find.byType(ImmichLogo), findsOneWidget);
     expect(find.byType(Bbos6MediaListTile), findsNWidgets(6));
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(NavigationRail), findsNothing);
