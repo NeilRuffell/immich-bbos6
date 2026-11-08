@@ -335,14 +335,8 @@ class PaneManagerItem {
   final Widget? icon;
   final bool showLabel;
 
-  /// Relative width of this item within the pane bar.
   final int flex;
-
-  /// Override the label size for compact items without changing other panes.
   final double labelFontSize;
-
-  /// Optional action item. Activation invokes this callback instead of
-  /// selecting a pane or transferring focus into PaneManagerContent.
   final VoidCallback? onActivate;
 }
 
