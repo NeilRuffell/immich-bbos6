@@ -532,16 +532,14 @@ class _AlbumList extends ConsumerWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16, bottom: 64),
+      padding: const EdgeInsets.only(bottom: 64),
       sliver: SliverList.builder(
         itemBuilder: (_, index) {
           final album = albums[index];
           final isOwner = album.ownerId == userId;
 
           if (isOwner) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Dismissible(
+            return Dismissible(
                 key: ValueKey(album.id),
                 background: Container(
                   color: context.colorScheme.error,
@@ -565,13 +563,9 @@ class _AlbumList extends ConsumerWidget {
                   await ref.read(remoteAlbumProvider.notifier).deleteAlbum(album.id);
                 },
                 child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
-              ),
-            );
+              );
           } else {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected),
-            );
+            return AlbumTile(album: album, isOwner: isOwner, onAlbumSelected: onAlbumSelected);
           }
         },
         itemCount: albums.length,
