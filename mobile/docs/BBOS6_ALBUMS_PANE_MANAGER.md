@@ -35,7 +35,7 @@ yet; their BBOS6 controls are a later task.
 - Preview: `mobile/packages/ui/lib/src/previews/bbos6_pane_manager.dart`
 - Tests: `mobile/packages/ui/test/pane_manager_test.dart`
 
-The widget receives **pane models** (label and optional icon, including icon-only display), an external **selected index**, and an **onSelected** callback. Pane items may also supply a relative `flex`, `labelFontSize`, and `onActivate` callback. Action items run their callback when activated without changing the selected index or entering pane content. It does not know what Immich, albums, or their server are.
+The widget receives **pane models** (label and optional icon, including icon-only display), an external **selected index**, and an **onSelected** callback. Pane items may also supply a relative `flex`, `labelFontSize`, accessible `semanticLabel`, and `onActivate` callback. Action items run their callback when activated without changing the selected index or entering pane content. It does not know what Immich, albums, or their server are.
 
 ### BBOS6 appearance and input
 
@@ -47,9 +47,10 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   selected (blue-gradient) pane. Left/Right moves that focus border without
   changing the selected pane or its album results. Only trackpad click/Enter
   or touch activates the highlighted pane. The shared `onSelected` callback
-  runs only when the selection changes. The shared `PaneManager` itself
-  transfers focus to its optional `contentFocusNode` on every activation,
-  including clicks on the currently selected pane.
+  runs only when the selection changes. For filter pane activations, the
+  shared `PaneManager` transfers focus to its optional `contentFocusNode`,
+  including clicks on the currently selected pane. Action item callbacks
+  run without that focus transfer.
 - After an Albums pane is activated, the helper resets the containing scroll
   view to its start and transfers focus to the supplied first-row focus node
   after Flutter rebuilds the selected content. The same node is attached to the
@@ -60,7 +61,7 @@ The widget receives **pane models** (label and optional icon, including icon-onl
   `PaneManagerController` and `PaneManagerContent`. Up/Down on the pane bar
   cannot enter its content; directional traversal and Tab traversal at content
   edges cannot jump back into the pane bar.
-- Enter/trackpad click activates the highlighted pane and moves focus to the
+- Enter/trackpad click activates a highlighted filter pane and moves focus to the
   supplied content target. The first Back is handled by the shared PaneManager
   and returns to the selected pane without changing its data. Back again is
   passed to the page's existing navigation (Albums returns to Pictures home).
