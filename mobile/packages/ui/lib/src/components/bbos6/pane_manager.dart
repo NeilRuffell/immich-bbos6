@@ -83,7 +83,8 @@ class PaneManagerContent extends StatelessWidget {
 }
 
 /// Keeps keyboard/trackpad focus visible within the PaneManager-owned
-/// Scrollable, including when moving upward behind a pinned pane header.
+/// Scrollable, aligning upward travel below the pinned pane header and
+/// downward travel against the bottom of the viewport.
 /// This wrapper is safe for RenderSliver children: it creates no RenderBox.
 class _PaneContentFocusScrollSync extends StatefulWidget {
   const _PaneContentFocusScrollSync({required this.controller, required this.child});
@@ -156,20 +157,27 @@ class _PaneContentFocusScrollSyncState extends State<_PaneContentFocusScrollSync
     }
 
     final focusedTop = focusedRender.localToGlobal(Offset.zero).dy;
-    if (focusedTop >= visibleTop - 0.5) {
-      return; // Do not interfere with Flutter's working downward scrolling.
-    }
+    final focusedBottom = focusedTop + focusedRender.size.height;
 
-    // Scroll just enough to put the focused row below any pinned pane header.
-    // The viewport computes the reveal offset for slivers and regular lists.
-    final alignment = ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0).toDouble();
+    // Match standalone list traversal: only scroll when focus crosses a
+    // visible edge. Up aligns below the pinned pane bar; down aligns with
+    // the viewport bottom. Moving focus within those edges does not scroll.
+    final bool revealUp = focusedTop < visibleTop - 0.5;
+    final bool revealDown = focusedBottom > viewportBottom + 0.5;
+    if (!revealUp && !revealDown) {
+      return;
+    }
+    final alignment = revealUp
+        ? ((visibleTop - viewportTop) / viewportRender.size.height).clamp(0.0, 1.0).toDouble()
+        : 1.0;
     position.ensureVisible(focusedRender, alignment: alignment);
     if (kDebugMode) {
       debugPrint(
-        'BBOS6-PaneScroll: focus.reveal-up '
+        'BBOS6-PaneScroll: focus.reveal-${revealUp ? "up" : "down"} '
         'focus=${FocusManager.instance.primaryFocus?.debugLabel ?? "none"} '
         'visibleTop=${visibleTop.toStringAsFixed(1)} '
-        'itemTop=${focusedTop.toStringAsFixed(1)} '
+        'itemY=${focusedTop.toStringAsFixed(1)}..${focusedBottom.toStringAsFixed(1)} '
+        'viewportBottom=${viewportBottom.toStringAsFixed(1)} '
         'scrollPixels=${position.pixels.toStringAsFixed(1)}',
       );
     }
