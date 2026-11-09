@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
@@ -11,7 +13,9 @@ import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
+import 'package:immich_mobile/presentation/widgets/timeline/bbos6_timeline_date_footer.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
+import 'package:immich_mobile/presentation/widgets/timeline/fixed/segment.model.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/multi_select_status_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/scrubber.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/segment.model.dart';
@@ -36,6 +40,7 @@ class Timeline extends ConsumerWidget {
     this.topSliverWidgetHeight,
     this.bottomSliverWidget,
     this.showStorageIndicator = false,
+    this.bbosGallery = false,
     this.withStack = false,
     this.appBar = const ImmichSliverAppBar(floating: true, pinned: false, snap: false),
     this.bottomSheet = const GeneralBottomSheet(minChildSize: 0.23),
@@ -51,11 +56,13 @@ class Timeline extends ConsumerWidget {
   final double? topSliverWidgetHeight;
   final Widget? bottomSliverWidget;
   final bool showStorageIndicator;
+  final bool bbosGallery;
   final Widget? appBar;
   final Widget? bottomSheet;
   final bool withStack;
   final GroupAssetsBy? groupBy;
   final bool withScrubber;
+  final bool bbosGallery;
   final bool snapToMonth;
   final bool readOnly;
   final bool persistentBottomBar;
@@ -73,7 +80,8 @@ class Timeline extends ConsumerWidget {
             timelineArgsProvider.overrideWithValue(
               TimelineArgs(
                 maxWidth: constraints.maxWidth,
-                maxHeight: constraints.maxHeight,
+                maxHeight: constraints.maxHeight -
+                    (bbosGallery ? Bbos6GalleryView.footerHeight + MediaQuery.paddingOf(context).bottom : 0),
                 columnCount: columnCount,
                 showStorageIndicator: showStorageIndicator,
                 withStack: withStack,
@@ -89,6 +97,7 @@ class Timeline extends ConsumerWidget {
             appBar: appBar,
             bottomSheet: bottomSheet,
             withScrubber: withScrubber,
+            bbosGallery: bbosGallery,
             persistentBottomBar: persistentBottomBar,
             snapToMonth: snapToMonth,
             maxWidth: constraints.maxWidth,
@@ -119,6 +128,7 @@ class _SliverTimeline extends ConsumerStatefulWidget {
     this.appBar,
     this.bottomSheet,
     this.withScrubber = true,
+    this.bbosGallery = false,
     this.persistentBottomBar = false,
     this.snapToMonth = true,
     this.maxWidth,
@@ -142,6 +152,7 @@ class _SliverTimeline extends ConsumerStatefulWidget {
 
 class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBindingObserver {
   late final ScrollController _scrollController;
+  final Bbos6GridNavigationController _galleryController = Bbos6GridNavigationController();
   StreamSubscription? _eventSubscription;
 
   int? _restoreAssetIndex;
@@ -253,6 +264,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     WidgetsBinding.instance.removeObserver(this);
     _fastScrollDebouncer.dispose();
     _scrollController.dispose();
+    _galleryController.dispose();
     unawaited(_eventSubscription?.cancel());
     super.dispose();
   }
@@ -319,6 +331,60 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     });
   }
 
+
+  void _revealGalleryIndex(List<Segment> segments, int assetIndex) {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final segment = segments.firstWhereOrNull(
+      (item) => assetIndex >= item.firstAssetIndex && assetIndex < item.firstAssetIndex + item.bucket.assetCount,
+    );
+    if (segment == null) {
+      return;
+    }
+
+    final columnCount = ref.read(timelineArgsProvider).columnCount;
+    final rowIndex = segment.gridIndex + (assetIndex - segment.firstAssetIndex) ~/ columnCount;
+    final contentTopOffset = (widget.appBar == null
+            ? 0.0
+            : widget.appBar is MesmerizingSliverAppBar
+            ? 200.0
+            : kToolbarHeight + MediaQuery.paddingOf(context).top) +
+        (widget.topSliverWidgetHeight ?? 0.0);
+    final rowTop = segment.indexToLayoutOffset(rowIndex) + contentTopOffset;
+    final rowHeight = segment is FixedSegment ? segment.tileHeight : widget.maxWidth / columnCount;
+    final rowBottom = rowTop + rowHeight;
+    final scrollPosition = _scrollController.position;
+    final currentOffset = scrollPosition.pixels;
+    final targetOffset = rowTop < currentOffset
+        ? rowTop
+        : rowBottom > currentOffset + scrollPosition.viewportDimension
+        ? rowBottom - scrollPosition.viewportDimension
+        : currentOffset;
+
+    if (targetOffset != currentOffset) {
+      unawaited(
+        _scrollController.animateTo(
+          targetOffset.clamp(0.0, scrollPosition.maxScrollExtent),
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
+  }
+
+  Future<void> _activateGalleryIndex(int assetIndex) async {
+    final asset = await ref.read(timelineServiceProvider).getAssetAsync(assetIndex);
+    if (!mounted || asset == null) {
+      return;
+    }
+    final columnCount = ref.read(timelineArgsProvider).columnCount;
+    final tileExtent = math.max(0.0, widget.maxWidth - (kTimelineSpacing * (columnCount - 1))) / columnCount;
+    final pixelSize = tileExtent * MediaQuery.devicePixelRatioOf(context);
+    await activateTimelineAsset(context, ref, assetIndex, asset, Size.square(pixelSize));
+  }
+
   @override
   Widget build(BuildContext _) {
     final asyncSegments = ref.watch(timelineSegmentProvider);
@@ -368,7 +434,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                     context.padding.bottom + (isMultiSelectEnabled ? bottomSheetOpenModifier : 0);
                 final scrubberBottomPadding = contentBottomPadding + kScrubberThumbHeight;
 
-                return TimelinePinchZoom(
+                final timelineChild = TimelinePinchZoom(
                   onColumnCountWillChange: () {
                     final targetAssetIndex = _getCurrentAssetIndex(segments);
                     setState(() {
@@ -445,6 +511,20 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                       );
                     },
                   ),
+                );
+
+                if (!widget.bbosGallery) {
+                  return timelineChild;
+                }
+
+                return Bbos6GalleryView(
+                  controller: _galleryController,
+                  sectionItemCounts: [for (final segment in segments) segment.bucket.assetCount],
+                  columnCount: ref.read(timelineArgsProvider).columnCount,
+                  onReveal: (index) => _revealGalleryIndex(segments, index),
+                  onActivate: (index) => unawaited(_activateGalleryIndex(index)),
+                  footerBuilder: (context, selectedIndex) => Bbos6TimelineDateFooter(selectedIndex: selectedIndex),
+                  child: timelineChild,
                 );
               },
             ),
