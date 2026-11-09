@@ -203,6 +203,7 @@ class _RemoteAlbumPageState extends ConsumerState<RemoteAlbumPage> {
         currentRemoteAlbumScopedProvider.overrideWithValue(_album),
       ],
       child: Timeline(
+        bbosGallery: true,
         topSliverWidget: PendingUploadsBanner(albumId: _album.id),
         appBar: FutureBuilder<bool>(
           future: ref
