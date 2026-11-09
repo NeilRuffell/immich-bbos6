@@ -9,6 +9,7 @@ import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
@@ -19,6 +20,7 @@ class TimelineHeader extends HookWidget {
   final HeaderType header;
   final double height;
   final int assetOffset;
+  final bool compact;
 
   const TimelineHeader({
     super.key,
@@ -26,6 +28,7 @@ class TimelineHeader extends HookWidget {
     required this.header,
     required this.height,
     required this.assetOffset,
+    this.compact = false,
   });
 
   String _formatMonth(DateTime date) {
@@ -50,39 +53,104 @@ class TimelineHeader extends HookWidget {
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
 
-    return Padding(
-      padding: EdgeInsets.only(top: isMonthHeader ? 8.0 : 0.0, left: 12.0, right: 12.0),
-      child: SizedBox(
+    // A combined month/day header is two text lines, not two full-height
+    // rows. The date-group selection control retains its 48dp touch target
+    // independently on the right, aligned with the lower date line.
+    if (compact && header == HeaderType.monthAndDay) {
+      return SizedBox(
         height: height,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            if (isMonthHeader)
-              Row(
-                children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatMonth(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: kBbos6TimelineDateTopPadding,
+            left: 12.0,
+            right: 12.0,
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: kBbos6TimelineDateRowHeight),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        toBeginningOfSentenceCase(_formatMonth(date)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelLarge?.copyWith(fontSize: 24, height: 1.05),
+                      ),
+                      const SizedBox(height: kBbos6TimelineCombinedTextGap),
+                      Text(
+                        toBeginningOfSentenceCase(_formatDay(date)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelLarge?.copyWith(fontSize: 15, height: 1.05),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
-                ],
+                ),
               ),
-            if (isDayHeader)
-              Row(
-                children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatDay(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 15),
-                  ),
-                  const Spacer(),
-                  _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
-                ],
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
               ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+    }
+
+    Widget dateRow(Widget child) => compact
+        ? SizedBox(height: kBbos6TimelineDateRowHeight, child: child)
+        : child;
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: compact ? MainAxisAlignment.spaceBetween : MainAxisAlignment.spaceEvenly,
+      children: [
+        if (isMonthHeader)
+          dateRow(Row(
+            children: [
+              Text(
+                toBeginningOfSentenceCase(_formatMonth(date)),
+                style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+              ),
+              const Spacer(),
+              if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+            ],
+          )),
+        if (isDayHeader)
+          dateRow(Row(
+            children: [
+              Text(
+                toBeginningOfSentenceCase(_formatDay(date)),
+                style: context.textTheme.labelLarge?.copyWith(fontSize: 15),
+              ),
+              const Spacer(),
+              _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+            ],
+          )),
+      ],
+    );
+
+    final padding = EdgeInsets.only(
+      top: isMonthHeader ? (compact ? kBbos6TimelineDateTopPadding : 8.0) : 0.0,
+      left: 12.0,
+      right: 12.0,
+    );
+
+    // The compact header's padding must fit *inside* its reported extent so
+    // virtualized row offsets remain aligned with the rendered date header.
+    if (compact) {
+      return SizedBox(height: height, child: Padding(padding: padding, child: content));
+    }
+
+    return Padding(
+      padding: padding,
+      child: SizedBox(height: height, child: content),
     );
   }
 }

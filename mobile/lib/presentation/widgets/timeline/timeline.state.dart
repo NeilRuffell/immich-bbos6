@@ -65,6 +65,10 @@ class TimelineStateNotifier extends Notifier<TimelineState> {
   TimelineState build() => const TimelineState(isScrolling: false, recommendDeferredLoading: false);
 }
 
+// Presentation-only density setting scoped to the active Timeline instance.
+// No generated TimelineArgs or repository changes are required.
+final compactTimelineDateHeadersProvider = Provider<bool>((ref) => false, dependencies: const []);
+
 // This provider watches the buckets from the timeline service & args and serves the segments.
 // It should be used only after the timeline service and timeline args provider is overridden
 final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) async* {
@@ -76,6 +80,7 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
   final tileExtent = math.max(0, availableTileWidth) / columnCount;
 
   final groupBy = groupByArg ?? ref.watch(appConfigProvider.select((config) => config.timeline.groupAssetsBy));
+  final compactDateHeaders = ref.watch(compactTimelineDateHeadersProvider);
 
   final timelineService = ref.watch(timelineServiceProvider);
   yield* timelineService.watchBuckets().map((buckets) {
@@ -85,8 +90,9 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
       columnCount: columnCount,
       spacing: spacing,
       groupBy: groupBy!,
+      compactDateHeaders: compactDateHeaders,
     ).generate();
   });
-}, dependencies: [timelineServiceProvider, timelineArgsProvider]);
+}, dependencies: [timelineServiceProvider, timelineArgsProvider, compactTimelineDateHeadersProvider]);
 
 final timelineStateProvider = NotifierProvider<TimelineStateNotifier, TimelineState>(TimelineStateNotifier.new);

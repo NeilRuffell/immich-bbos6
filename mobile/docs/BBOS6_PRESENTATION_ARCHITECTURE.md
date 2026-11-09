@@ -78,6 +78,10 @@ Verified in this fork:
 
 Retain Immich components when only their `ThemeData` styling needs changing. Use a new reusable BBOS6 component where Flutter's theme cannot express a verified gradient, border, icon treatment, or focus state. Avoid duplicate renderers or parallel data pipelines.
 
+## Shared BBOS6 timeline gallery
+
+The reusable `Bbos6GalleryView`, `Bbos6GridNavigationController` and `Bbos6GalleryItem` live under `mobile/packages/ui/lib/src/components/bbos6/`. Pictures Library enables them through `Timeline(bbosGallery: true)` while retaining its existing Immich timeline data, thumbnail and viewer implementation. The shared controls manage row-aware keyboard navigation and highlight while keeping stock date header rows and date-group selection controls. The shared gallery does not render a persistent footer. Immich-specific actions remain in Flutter presentation adapters. See [BBOS6 Timeline Gallery](BBOS6_TIMELINE_GALLERY.md).
+
 ## Shared-helper ownership contract
 
 **Shared first, even with a single current consumer.** When a change request
