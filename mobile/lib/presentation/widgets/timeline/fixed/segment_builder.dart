@@ -44,7 +44,11 @@ class FixedSegmentBuilder extends SegmentBuilder {
       final headerExtent = SegmentBuilder.headerExtent(timelineHeader, compact: compactDateHeaders);
 
       final segmentStartOffset = startOffset;
-      startOffset += headerExtent + (tileHeight * numberOfRows) + spacing * (numberOfRows - 1);
+      // Compact headers include the first header-to-row gap in the segment
+      // extent, matching the scroll offset used by FixedSegment.gridOffset.
+      startOffset += headerExtent +
+          (tileHeight * numberOfRows) +
+          spacing * (compactDateHeaders ? numberOfRows : numberOfRows - 1);
       final segmentEndOffset = startOffset;
 
       segments.add(
