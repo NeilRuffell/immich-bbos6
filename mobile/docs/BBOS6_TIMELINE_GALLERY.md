@@ -50,11 +50,14 @@ date text and existing date-group selection control.
 | --- | ---: | ---: |
 | Day | 72dp | 52dp |
 | Month | 80dp | 52dp |
-| Month and day | 128dp | 88dp |
+| Month and day | 128dp | 104dp |
 
-The compact header keeps its vertical padding inside the reported extent.
-Its segment scroll offsets account for the gap before the first thumbnail,
-preventing accumulated blank space or overlapping date rows. Other timeline
+The compact header uses two explicit 48dp rows for combined month/day labels,
+with 4dp top padding and a 4dp inter-row gap. This preserves the normal
+selection control touch target and prevents a RenderFlex overflow at the
+bottom of the combined header. These layout values are centralized in
+`timeline/constants.dart` and used by both the header widget and the
+virtualized segment geometry, avoiding unaccounted spacing. Other timeline
 consumers retain stock heights and appearance. Do not change the underlying
 bucket grouping, image source, date scrubber, or selection callbacks.
 
@@ -69,6 +72,9 @@ bucket grouping, image source, date scrubber, or selection callbacks.
   touchscreen tap and long-press, and selection mode.
 - Verify compact date labels and checkboxes are not clipped, and focus
   scrolling and the scrubber align correctly after crossing month/day headers.
+- Run `mobile/test/presentation/widgets/timeline/bbos6_date_header_overflow_test.dart`
+  to check compact month/day, month-only, and day-only headers at 360dp
+  width with 120% text scaling and the full 48dp selection control.
 - Verify the image grid extends to its normal bottom edge without a
   persistent date/time footer.
 - Verify stock date scroller behavior and other Timeline consumers.
