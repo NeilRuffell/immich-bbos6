@@ -73,6 +73,7 @@ class Timeline extends ConsumerWidget {
       builder: (_, constraints) {
         return ProviderScope(
           overrides: [
+            compactTimelineDateHeadersProvider.overrideWithValue(bbosGallery),
             // overrideWithValue keeps the scoped args in sync with the latest constraints on rebuilds,
             // a function override would stay locked to the first frame's constraints for the whole session
             timelineArgsProvider.overrideWithValue(
