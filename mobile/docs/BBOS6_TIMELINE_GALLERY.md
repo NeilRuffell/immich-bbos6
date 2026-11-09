@@ -50,16 +50,20 @@ date text and existing date-group selection control.
 | --- | ---: | ---: |
 | Day | 72dp | 52dp |
 | Month | 80dp | 52dp |
-| Month and day | 128dp | 104dp |
+| Month and day | 128dp | 72dp |
 
-The compact header uses two explicit 48dp rows for combined month/day labels,
-with 4dp top padding and a 4dp inter-row gap. This preserves the normal
-selection control touch target and prevents a RenderFlex overflow at the
-bottom of the combined header. These layout values are centralized in
-`timeline/constants.dart` and used by both the header widget and the
-virtualized segment geometry, avoiding unaccounted spacing. Other timeline
-consumers retain stock heights and appearance. Do not change the underlying
-bucket grouping, image source, date scrubber, or selection callbacks.
+The compact combined month/day header presents the month and date as a
+two-line text stack with a **2dp line gap** and compact (1.05) line height.
+Its 48dp date-group selection control is separately positioned on the right,
+aligned with the date line rather than occupying a second text row. The
+combined height is **72dp**, preserving the checkbox touch target without
+padding out both labels to 48dp each.
+
+The single-date rows remain 52dp. The header heights and text gap are
+centralized in `timeline/constants.dart`, and the virtualized segment
+geometry uses the same extents. Other Timeline consumers retain stock header
+dimensions and behavior. Do not change underlying bucket grouping, image
+source, the stock date scrubber, or selection callbacks.
 
 ## Verification
 
