@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +8,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/sliver_app_bar/item_count_text.widget.dart';
-import 'package:immich_mobile/presentation/widgets/sliver_app_bar/random_asset_background_image.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/remote_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
@@ -29,6 +28,45 @@ class RemoteAlbumSliverAppBar extends ConsumerStatefulWidget {
 
 class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBar> {
   double _scrollProgress = 0.0;
+
+  // Reserve only the space used by album details, plus clearance for the
+  // pinned toolbar. Longer album names and descriptions increase the height
+  // instead of overflowing a one-size-fits-all header.
+  double _expandedHeight(BuildContext context, String name, String description, bool isShared) {
+    final maxWidth = math.max(1.0, MediaQuery.sizeOf(context).width - 32.0);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final titlePainter = TextPainter(
+      text: TextSpan(text: name, style: _CompactAlbumTitle.style),
+      textScaler: textScaler,
+      textDirection: direction,
+      maxLines: 3,
+    )..layout(maxWidth: maxWidth);
+    final titleHeight = titlePainter.height;
+    titlePainter.dispose();
+
+    var descriptionHeight = 0.0;
+    if (description.isNotEmpty) {
+      final descriptionPainter = TextPainter(
+        text: TextSpan(text: description, style: _ExpandedBackgroundState.descriptionStyle),
+        textScaler: textScaler,
+        textDirection: direction,
+        maxLines: 2,
+      )..layout(maxWidth: maxWidth);
+      descriptionHeight = math.min(44.0, descriptionPainter.height) + 4.0;
+      descriptionPainter.dispose();
+    }
+
+    // The existing shared-user widget occupies 50dp when the album is shared.
+    const toolbarClearance = kToolbarHeight + 30.0;
+    const metadataHeight = 24.0;
+    const bottomPadding = 12.0;
+    final usersHeight = isShared ? 54.0 : 0.0;
+    return math.max(
+      180.0,
+      toolbarClearance + metadataHeight + titleHeight + descriptionHeight + usersHeight + bottomPadding,
+    );
+  }
 
   double _calculateScrollProgress(FlexibleSpaceBarSettings? settings) {
     if (settings?.maxExtent == null || settings?.minExtent == null) {
@@ -62,7 +100,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
     ];
 
     return SliverAppBar(
-      expandedHeight: 400.0,
+      expandedHeight: _expandedHeight(context, currentAlbum.name, currentAlbum.description, currentAlbum.isShared),
       floating: false,
       pinned: true,
       snap: false,
@@ -139,6 +177,13 @@ class _ExpandedBackground extends ConsumerStatefulWidget {
 }
 
 class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with SingleTickerProviderStateMixin {
+  static const descriptionStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 14,
+    height: 1.15,
+    shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black54)],
+  );
+
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
 
@@ -168,7 +213,6 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
 
   @override
   Widget build(BuildContext context) {
-    final timelineService = ref.watch(timelineServiceProvider);
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
 
     if (currentAlbum == null) {
@@ -179,35 +223,9 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
     return Stack(
       fit: StackFit.expand,
       children: [
-        Transform.translate(
-          offset: Offset(0, widget.scrollProgress * 50),
-          child: Transform.scale(
-            scale: 1.4 - (widget.scrollProgress * 0.2),
-            child: RandomAssetBackgroundImage(timelineService: timelineService),
-          ),
-        ),
-        ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: widget.scrollProgress * 2.0, sigmaY: widget.scrollProgress * 2.0),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.05),
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.3),
-                    Colors.black.withValues(alpha: 0.6 + (widget.scrollProgress * 0.25)),
-                  ],
-                  stops: const [0.0, 0.15, 0.55, 1.0],
-                ),
-              ),
-            ),
-          ),
-        ),
+        const ColoredBox(color: Color(0xFF151515)),
         Positioned(
-          bottom: 16,
+          bottom: 12,
           left: 16,
           right: 16,
           child: SlideTransition(
@@ -251,27 +269,23 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
                   onTap: widget.onEditTitle,
                   child: LayoutBuilder(
                     builder: (context, constraints) =>
-                        _DynamicText(text: currentAlbum.name, maxWidth: constraints.maxWidth),
+                        _CompactAlbumTitle(text: currentAlbum.name, maxWidth: constraints.maxWidth),
                   ),
                 ),
                 if (currentAlbum.description.isNotEmpty)
                   GestureDetector(
                     onTap: widget.onEditTitle,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 80),
+                      constraints: const BoxConstraints(maxHeight: 44),
                       child: SingleChildScrollView(
                         child: Text(
                           currentAlbum.description,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            shadows: [Shadow(offset: Offset(0, 2), blurRadius: 8, color: Colors.black54)],
-                          ),
+                          style: descriptionStyle,
                         ),
                       ),
                     ),
                   ),
-                const Padding(padding: EdgeInsets.only(top: 8.0), child: RemoteAlbumSharedUserIcons()),
+                const Padding(padding: EdgeInsets.only(top: 4.0), child: RemoteAlbumSharedUserIcons()),
               ],
             ),
           ),
@@ -281,45 +295,27 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
   }
 }
 
-class _DynamicText extends StatelessWidget {
+class _CompactAlbumTitle extends StatelessWidget {
   final String text;
   final double maxWidth;
 
-  const _DynamicText({required this.text, required this.maxWidth});
+  const _CompactAlbumTitle({required this.text, required this.maxWidth});
 
-  static const _baseTextStyle = TextStyle(
+  static const style = TextStyle(
     color: Colors.white,
     fontWeight: FontWeight.bold,
-    letterSpacing: 0.5,
-    shadows: [Shadow(offset: Offset(0, 2), blurRadius: 12, color: Colors.black54)],
-    overflow: TextOverflow.ellipsis,
+    fontSize: 26,
+    height: 1.08,
+    letterSpacing: 0.2,
   );
-
-  int _lineCount(double fontSize) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: _baseTextStyle.copyWith(fontSize: fontSize),
-      ),
-      maxLines: 3,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth);
-    return textPainter.computeLineMetrics().length;
-  }
-
-  double _fontSize() {
-    final fontSizes = [44.0, 36.0];
-    for (final fontSize in fontSizes) {
-      final lineCount = _lineCount(fontSize);
-      if (lineCount == 1) {
-        return fontSize;
-      }
-    }
-    return 28;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: _baseTextStyle.copyWith(fontSize: _fontSize()), maxLines: 3);
+    return Text(
+      text,
+      style: style,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    );
   }
 }
