@@ -123,20 +123,16 @@ class Bbos6GalleryView extends StatefulWidget {
     required this.columnCount,
     required this.onReveal,
     required this.onActivate,
-    required this.footerBuilder,
     required this.child,
     this.autofocus = true,
     super.key,
   });
-
-  static const double footerHeight = 56;
 
   final Bbos6GridNavigationController controller;
   final List<int> sectionItemCounts;
   final int columnCount;
   final ValueChanged<int> onReveal;
   final ValueChanged<int> onActivate;
-  final Widget Function(BuildContext context, int? selectedIndex) footerBuilder;
   final Widget child;
   final bool autofocus;
 
@@ -211,41 +207,12 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
     return Bbos6GalleryScope(
       controller: widget.controller,
       requestFocus: _focusNode.requestFocus,
-      child: Column(
-        children: [
-          Expanded(
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: widget.autofocus,
-              onFocusChange: widget.controller.setFocused,
-              onKeyEvent: _onKeyEvent,
-              child: widget.child,
-            ),
-          ),
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              border: Border(top: BorderSide(color: Color(0xFF515251))),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: Bbos6GalleryView.footerHeight,
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: AnimatedBuilder(
-                      animation: widget.controller,
-                      builder: (context, _) => widget.footerBuilder(context, widget.controller.selectedIndex),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: Focus(
+        focusNode: _focusNode,
+        autofocus: widget.autofocus,
+        onFocusChange: widget.controller.setFocused,
+        onKeyEvent: _onKeyEvent,
+        child: widget.child,
       ),
     );
   }
