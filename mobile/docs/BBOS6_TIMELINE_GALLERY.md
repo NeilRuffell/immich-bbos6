@@ -50,9 +50,23 @@ highlighting, and compact date-row layout are inherited from the shared
 timeline/gallery components rather than reimplemented in this page.
 Local album galleries and all other Timeline consumers remain unchanged.
 
+The shared `RemoteAlbumSliverAppBar` removes its former animated album
+cover background and uses a solid dark surface. Instead of the stock fixed
+400dp expanded header, it calculates the expanded height from its compact
+album-title text (up to three lines), date range and item count, optional
+scrollable description (up to 44dp), and shared-user icon row. The pinned
+toolbar remains independently accessible for Back, slideshow, activity,
+and album options. Title and description editing, date metadata, item count,
+and shared-user controls are unchanged.
+
+The height calculation belongs to the existing album-header component, not
+a one-off `RemoteAlbumPage` wrapper. Regression coverage:
+`test/presentation/widgets/remote_album/compact_server_album_header_test.dart`.
+
 Because the server-album page contains a dynamic app bar and an upload banner,
 Q25 verification should include focus scrolling at both edges of the image
-viewport, Enter and Back, and navigation when a pending-upload banner is visible.
+viewport, Enter and Back, long titles and descriptions, shared-user rows,
+and navigation when a pending-upload banner is visible.
 
 ### Compact BBOS6 date rows
 
