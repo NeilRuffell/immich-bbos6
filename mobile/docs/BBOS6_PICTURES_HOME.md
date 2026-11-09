@@ -14,6 +14,8 @@ The authenticated app landing screen is a BBOS6-style **Pictures** menu with sev
 | People | People collection (`PeopleCollectionRoute`) |
 | Settings | Immich settings (`SettingsRoute`) |
 
+Pictures Library displays the photo timeline without the horizontal `MemoryLane` at the top. Memories remain accessible through the dedicated **Memories** entry on this home menu (`MemoryListRoute`). The existing reusable `MemoryLane` widget and memory providers remain unchanged.
+
 The original Immich bottom `NavigationBar` and landscape `NavigationRail` are **not rendered**. No horizontal four-tab navigation is visible. The former Library quick-access screen remains available as an internal route, but is not a Pictures home entry; Search is not an additional home entry.
 
 ## Future local-only mode
