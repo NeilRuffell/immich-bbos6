@@ -53,6 +53,56 @@ class TimelineHeader extends HookWidget {
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
 
+    // A combined month/day header is two text lines, not two full-height
+    // rows. The date-group selection control retains its 48dp touch target
+    // independently on the right, aligned with the lower date line.
+    if (compact && header == HeaderType.monthAndDay) {
+      return SizedBox(
+        height: height,
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: kBbos6TimelineDateTopPadding,
+            left: 12.0,
+            right: 12.0,
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: kBbos6TimelineDateRowHeight),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        toBeginningOfSentenceCase(_formatMonth(date)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelLarge?.copyWith(fontSize: 24, height: 1.05),
+                      ),
+                      const SizedBox(height: kBbos6TimelineCombinedTextGap),
+                      Text(
+                        toBeginningOfSentenceCase(_formatDay(date)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelLarge?.copyWith(fontSize: 15, height: 1.05),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     Widget dateRow(Widget child) => compact
         ? SizedBox(height: kBbos6TimelineDateRowHeight, child: child)
         : child;
