@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/data/store.dart';
 import 'package:immich_mobile/domain/models/person.model.dart';
@@ -76,14 +77,17 @@ class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
                 } else {
                   filtered = people;
                 }
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isTablet ? 6 : 3,
-                    childAspectRatio: 0.85,
-                    mainAxisSpacing: isPortrait && isTablet ? 36 : 0,
-                  ),
+                void openPerson(int index) {
+                  unawaited(context.pushRoute(PersonRoute(person: filtered[index])));
+                }
+
+                return Bbos6GalleryGrid(
+                  columns: isTablet ? 6 : 3,
+                  childAspectRatio: 0.85,
+                  mainAxisSpacing: isPortrait && isTablet ? 36 : 0,
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   itemCount: filtered.length,
+                  onActivate: openPerson,
                   itemBuilder: (context, index) {
                     final person = filtered[index];
 
@@ -91,9 +95,7 @@ class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
                       key: ValueKey(person.id),
                       children: [
                         GestureDetector(
-                          onTap: () {
-                            unawaited(context.pushRoute(PersonRoute(person: person)));
-                          },
+                          onTap: () => openPerson(index),
                           child: Material(
                             shape: const CircleBorder(side: BorderSide.none),
                             elevation: 3,
