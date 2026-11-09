@@ -2,9 +2,14 @@
 
 ## Scope
 
-Pictures Library and opened server albums use `Bbos6GalleryView`, enabled by
-`Timeline(bbosGallery: true)`. Other timelines retain stock behavior unless they
-explicitly opt into this shared presentation component.
+Every `Timeline` image gallery uses `Bbos6GalleryView` by default
+(`Timeline(bbosGallery: true)`). This includes Pictures Library, server and
+local albums, Favorites, Archive, Trash, Locked Folder, Search Results,
+individual People and Places, Partners, Recently Added, Recently Taken,
+Videos, asset-selection timelines and read-only cleanup previews.
+Individual screens keep their own data, actions and layout. If a consumer must
+explicitly exclude BBOS6 gallery interaction, it may set
+`Timeline(bbosGallery: false)`.
 
 Reusable controls live in
 `mobile/packages/ui/lib/src/components/bbos6/bbos6_gallery_view.dart`:
@@ -16,9 +21,38 @@ Reusable controls live in
 - `Bbos6GalleryItem` adds a focus highlight to a supplied thumbnail without
   changing Immich image loading, thumbnail tap or long-press behavior.
 
-Consumers pass section item counts, the column count, an existing scrollable,
-reveal and activation callbacks. The shared control has no dependency on
+For non-Timeline image grids, `Bbos6GalleryGrid` is a ready-to-use adapter
+with an existing item builder, item count, column count, spacing and activation
+callback. It delegates focus, keyboard navigation, highlighting and measured
+scroll-to-reveal to the same underlying `Bbos6GalleryView`. The independent
+Memories and People image grids use this adapter, while retaining their
+original touch, filtering and viewer/person routing. Album-cover grids already
+controlled by `PaneManager`, static miniature library preview mosaics and
+non-image grids do not change their separate focus semantics.
+
+Raw `Bbos6GalleryView` consumers pass section item counts, the column count,
+an existing scrollable, reveal and activation callbacks. The shared control
+has no dependency on
 `BaseAsset`, Riverpod, Immich routes, EXIF or a database/API.
+
+## Global image-grid integration
+
+`Timeline` now defaults `bbosGallery` to `true`; its existing
+`Bbos6GalleryItem` thumbnails and shared reveal adapter apply uniformly to
+every Timeline consumer. Page-level `Timeline` calls are deliberately not
+duplicated. `Bbos6GalleryGrid` covers independently navigable, regular
+image-card grids outside Timeline; callers supply only tile construction and
+what Enter should activate.
+
+The shared helper measures the scroll viewport and pinned sliver obstruction
+for visible items. For unbuilt virtualized cells, Timeline retains its
+existing asset-position callback, while `Bbos6GalleryGrid` has its own
+generic layout-based fallback. The helper owns the final measured alignment.
+
+Check these cases on Q25: search results, assets in Favorites/Archive/Trash,
+locked albums, albums with expanded/collapsed headers, selection-only
+timelines, populated and empty Memories/People grids, changing search filters,
+and Back from opened photos or people.
 
 ## Pictures Library integration
 
@@ -48,7 +82,8 @@ permissions and actions, selection flow, viewer, and
 `RemoteAlbumBottomSheet` remain unchanged. BBOS6 navigation, thumbnail
 highlighting, and compact date-row layout are inherited from the shared
 timeline/gallery components rather than reimplemented in this page.
-Local album galleries and all other Timeline consumers remain unchanged.
+Other Timeline galleries also inherit the shared behavior from the common
+Timeline component, without modifications to their page-specific code.
 
 The shared `RemoteAlbumSliverAppBar` removes its former animated album
 cover background and uses a solid dark surface. Instead of the stock fixed
@@ -90,8 +125,8 @@ padding out both labels to 48dp each.
 
 The single-date rows remain 52dp. The header heights and text gap are
 centralized in `timeline/constants.dart`, and the virtualized segment
-geometry uses the same extents. Other Timeline consumers retain stock header
-dimensions and behavior. Do not change underlying bucket grouping, image
+geometry uses the same extents. All Timeline galleries now inherit the same compact header
+dimensions and behavior unless they explicitly opt out. Do not change underlying bucket grouping, image
 source, the stock date scrubber, or selection callbacks.
 
 ## Verification
