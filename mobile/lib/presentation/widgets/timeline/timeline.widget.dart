@@ -13,7 +13,6 @@ import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
-import 'package:immich_mobile/presentation/widgets/timeline/bbos6_timeline_date_footer.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/fixed/segment.model.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/multi_select_status_button.widget.dart';
@@ -79,12 +78,10 @@ class Timeline extends ConsumerWidget {
             timelineArgsProvider.overrideWithValue(
               TimelineArgs(
                 maxWidth: constraints.maxWidth,
-                maxHeight: constraints.maxHeight -
-                    (bbosGallery ? Bbos6GalleryView.footerHeight + MediaQuery.paddingOf(context).bottom : 0),
+                maxHeight: constraints.maxHeight,
                 columnCount: columnCount,
                 showStorageIndicator: showStorageIndicator,
                 withStack: withStack,
-                omitHeaders: bbosGallery,
                 groupBy: groupBy,
               ),
             ),
@@ -226,7 +223,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
         final assetIndexInSegment = _restoreAssetIndex! - targetSegment.firstAssetIndex;
         final newColumnCount = ref.read(timelineArgsProvider).columnCount;
         final rowIndexInSegment = (assetIndexInSegment / newColumnCount).floor();
-        final targetRowIndex = targetSegment.gridIndex + rowIndexInSegment;
+        final targetRowIndex = targetSegment.firstIndex + 1 + rowIndexInSegment;
         final targetOffset = targetSegment.indexToLayoutOffset(targetRowIndex);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -248,8 +245,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     int? targetAssetIndex;
     if (segment != null) {
       final rowIndex = segment.getMinChildIndexForScrollOffset(currentOffset);
-      if (rowIndex >= segment.gridIndex) {
-        final rowIndexInSegment = rowIndex - segment.gridIndex;
+      if (rowIndex > segment.firstIndex) {
+        final rowIndexInSegment = rowIndex - (segment.firstIndex + 1);
         final assetsPerRow = ref.read(timelineArgsProvider).columnCount;
         final assetIndexInSegment = rowIndexInSegment * assetsPerRow;
         targetAssetIndex = segment.firstAssetIndex + assetIndexInSegment;
@@ -525,7 +522,6 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                   columnCount: ref.read(timelineArgsProvider).columnCount,
                   onReveal: (index) => _revealGalleryIndex(segments, index),
                   onActivate: (index) => unawaited(_activateGalleryIndex(index)),
-                  footerBuilder: (context, selectedIndex) => Bbos6TimelineDateFooter(selectedIndex: selectedIndex),
                   child: timelineChild,
                 );
               },
