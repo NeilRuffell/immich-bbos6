@@ -24,8 +24,15 @@ dependency on `BaseAsset`, Riverpod, Immich routes, EXIF or any database/API.
 
 `MainTimelinePage` enables the helper. `Timeline` continues to create the
 existing `CustomScrollView`, `SliverSegmentedList`, `FixedSegment` and
-`ThumbnailTile` widgets, including existing date headers, virtualization,
-selection, pinch zoom, scrubber, viewer and asset-loading logic.
+`ThumbnailTile` widgets, including virtualization, thumbnail selection,
+pinch zoom, scrubber, viewer and asset-loading logic. In `bbosGallery` mode,
+`FixedSegmentBuilder(omitHeaders: true)` skips the date header widgets and
+*their layout slots*, so the grid displays only image rows with no date labels
+or bulk-date-selection checkboxes. The underlying time buckets remain intact
+for existing timeline sorting, scrolling and the date scrubber. The final
+incomplete thumbnail row of each date bucket remains a normal image row;
+there are no separate date header gaps. Timelines without this option keep
+their original date headings and selection controls.
 
 The presentation adapter computes the scroll offset for a focused asset using
 its existing `Segment` geometry. It opens that asset using the same
@@ -63,6 +70,8 @@ It displays a placeholder when no asset or timestamp record is available.
   touchscreen tap and long-press, and selection mode.
 - Verify local-only images and server-backed images with and without EXIF dates,
   plus device and EXIF timezone differences.
+- Verify no date header labels, bulk-date-selection buttons, or empty header rows appear in BBOS6 gallery mode.
+- Verify that the date scrubber still works and the bottom focused-photo date/time bar remains visible.
 - Verify other Timeline consumers are unchanged when `bbosGallery` is false.
 
 Changes are restricted to Flutter presentation, shared UI and documentation.
