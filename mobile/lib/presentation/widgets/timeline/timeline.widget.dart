@@ -62,7 +62,6 @@ class Timeline extends ConsumerWidget {
   final bool withStack;
   final GroupAssetsBy? groupBy;
   final bool withScrubber;
-  final bool bbosGallery;
   final bool snapToMonth;
   final bool readOnly;
   final bool persistentBottomBar;
@@ -141,6 +140,7 @@ class _SliverTimeline extends ConsumerStatefulWidget {
   final Widget? appBar;
   final Widget? bottomSheet;
   final bool withScrubber;
+  final bool bbosGallery;
   final bool persistentBottomBar;
   final bool snapToMonth;
   final double? maxWidth;
@@ -353,7 +353,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
             : kToolbarHeight + MediaQuery.paddingOf(context).top) +
         (widget.topSliverWidgetHeight ?? 0.0);
     final rowTop = segment.indexToLayoutOffset(rowIndex) + contentTopOffset;
-    final rowHeight = segment is FixedSegment ? segment.tileHeight : widget.maxWidth / columnCount;
+    final rowHeight = segment is FixedSegment ? segment.tileHeight : (widget.maxWidth ?? MediaQuery.sizeOf(context).width) / columnCount;
     final rowBottom = rowTop + rowHeight;
     final scrollPosition = _scrollController.position;
     final currentOffset = scrollPosition.pixels;
@@ -380,7 +380,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
       return;
     }
     final columnCount = ref.read(timelineArgsProvider).columnCount;
-    final tileExtent = math.max(0.0, widget.maxWidth - (kTimelineSpacing * (columnCount - 1))) / columnCount;
+    final width = widget.maxWidth ?? MediaQuery.sizeOf(context).width;
+    final tileExtent = math.max(0.0, width - (kTimelineSpacing * (columnCount - 1))) / columnCount;
     final pixelSize = tileExtent * MediaQuery.devicePixelRatioOf(context);
     await activateTimelineAsset(context, ref, assetIndex, asset, Size.square(pixelSize));
   }
