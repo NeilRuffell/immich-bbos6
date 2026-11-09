@@ -42,7 +42,6 @@ class FixedSegment extends Segment {
     required super.headerExtent,
     required super.spacing,
     required super.header,
-    super.hasHeader,
   }) : assert(tileHeight != 0),
        mainAxisExtend = tileHeight + spacing;
 
@@ -58,7 +57,7 @@ class FixedSegment extends Segment {
     if (!adjustedOffset.isFinite || adjustedOffset < 0) {
       return firstIndex;
     }
-    return math.min(lastIndex, gridIndex + (adjustedOffset / mainAxisExtend).floor());
+    return gridIndex + (adjustedOffset / mainAxisExtend).floor();
   }
 
   @override
@@ -67,17 +66,17 @@ class FixedSegment extends Segment {
     if (!adjustedOffset.isFinite || adjustedOffset < 0) {
       return firstIndex;
     }
-    return math.min(lastIndex, math.max(firstIndex, gridIndex + (adjustedOffset / mainAxisExtend).ceil() - 1));
+    return gridIndex + (adjustedOffset / mainAxisExtend).ceil() - 1;
   }
 
   @override
   Widget builder(BuildContext context, int index) {
-    final rowIndexInSegment = index - gridIndex;
+    final rowIndexInSegment = index - (firstIndex + 1);
     final assetIndex = rowIndexInSegment * columnCount;
     final assetCount = bucket.assetCount;
     final numberOfAssets = math.min(columnCount, assetCount - assetIndex);
 
-    if (hasHeader && index == firstIndex) {
+    if (index == firstIndex) {
       return TimelineHeader(bucket: bucket, header: header, height: headerExtent, assetOffset: firstAssetIndex);
     }
 
