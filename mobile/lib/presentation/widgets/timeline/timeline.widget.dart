@@ -84,6 +84,7 @@ class Timeline extends ConsumerWidget {
                 columnCount: columnCount,
                 showStorageIndicator: showStorageIndicator,
                 withStack: withStack,
+                omitHeaders: bbosGallery,
                 groupBy: groupBy,
               ),
             ),
@@ -225,7 +226,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
         final assetIndexInSegment = _restoreAssetIndex! - targetSegment.firstAssetIndex;
         final newColumnCount = ref.read(timelineArgsProvider).columnCount;
         final rowIndexInSegment = (assetIndexInSegment / newColumnCount).floor();
-        final targetRowIndex = targetSegment.firstIndex + 1 + rowIndexInSegment;
+        final targetRowIndex = targetSegment.gridIndex + rowIndexInSegment;
         final targetOffset = targetSegment.indexToLayoutOffset(targetRowIndex);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -247,8 +248,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     int? targetAssetIndex;
     if (segment != null) {
       final rowIndex = segment.getMinChildIndexForScrollOffset(currentOffset);
-      if (rowIndex > segment.firstIndex) {
-        final rowIndexInSegment = rowIndex - (segment.firstIndex + 1);
+      if (rowIndex >= segment.gridIndex) {
+        final rowIndexInSegment = rowIndex - segment.gridIndex;
         final assetsPerRow = ref.read(timelineArgsProvider).columnCount;
         final assetIndexInSegment = rowIndexInSegment * assetsPerRow;
         targetAssetIndex = segment.firstAssetIndex + assetIndexInSegment;
