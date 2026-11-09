@@ -39,6 +39,7 @@ class _MainTimelinePageState extends ConsumerState<MainTimelinePage> {
   Widget build(BuildContext context) {
     return Timeline(
       showStorageIndicator: true,
+      bbosGallery: true,
     );
   }
 }
