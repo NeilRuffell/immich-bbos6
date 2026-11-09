@@ -19,6 +19,7 @@ class TimelineHeader extends HookWidget {
   final HeaderType header;
   final double height;
   final int assetOffset;
+  final bool compact;
 
   const TimelineHeader({
     super.key,
@@ -26,6 +27,7 @@ class TimelineHeader extends HookWidget {
     required this.header,
     required this.height,
     required this.assetOffset,
+    this.compact = false,
   });
 
   String _formatMonth(DateTime date) {
@@ -50,39 +52,46 @@ class TimelineHeader extends HookWidget {
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: compact ? MainAxisAlignment.spaceBetween : MainAxisAlignment.spaceEvenly,
+      children: [
+        if (isMonthHeader)
+          Row(
+            children: [
+              Text(
+                toBeginningOfSentenceCase(_formatMonth(date)),
+                style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+              ),
+              const Spacer(),
+              if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+            ],
+          ),
+        if (isDayHeader)
+          Row(
+            children: [
+              Text(
+                toBeginningOfSentenceCase(_formatDay(date)),
+                style: context.textTheme.labelLarge?.copyWith(fontSize: 15),
+              ),
+              const Spacer(),
+              _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+            ],
+          ),
+      ],
+    );
+
+    final padding = EdgeInsets.only(top: isMonthHeader ? (compact ? 4.0 : 8.0) : 0.0, left: 12.0, right: 12.0);
+
+    // The compact header's padding must fit *inside* its reported extent so
+    // virtualized row offsets remain aligned with the rendered date header.
+    if (compact) {
+      return SizedBox(height: height, child: Padding(padding: padding, child: content));
+    }
+
     return Padding(
-      padding: EdgeInsets.only(top: isMonthHeader ? 8.0 : 0.0, left: 12.0, right: 12.0),
-      child: SizedBox(
-        height: height,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            if (isMonthHeader)
-              Row(
-                children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatMonth(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
-                  ),
-                  const Spacer(),
-                  if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
-                ],
-              ),
-            if (isDayHeader)
-              Row(
-                children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatDay(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 15),
-                  ),
-                  const Spacer(),
-                  _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
-                ],
-              ),
-          ],
-        ),
-      ),
+      padding: padding,
+      child: SizedBox(height: height, child: content),
     );
   }
 }
