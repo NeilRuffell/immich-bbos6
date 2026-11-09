@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_ui/src/components/bbos6/bbos6_selection_gradient.dart';
 
@@ -101,19 +105,26 @@ class Bbos6GalleryScope extends InheritedWidget {
   const Bbos6GalleryScope({
     required this.controller,
     required this.requestFocus,
+    required this.registerItem,
+    required this.unregisterItem,
     required super.child,
     super.key,
   });
 
   final Bbos6GridNavigationController controller;
   final VoidCallback requestFocus;
+  final void Function(int index, BuildContext context) registerItem;
+  final void Function(int index, BuildContext context) unregisterItem;
 
   static Bbos6GalleryScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<Bbos6GalleryScope>();
 
   @override
   bool updateShouldNotify(Bbos6GalleryScope oldWidget) =>
-      controller != oldWidget.controller || requestFocus != oldWidget.requestFocus;
+      controller != oldWidget.controller ||
+      requestFocus != oldWidget.requestFocus ||
+      registerItem != oldWidget.registerItem ||
+      unregisterItem != oldWidget.unregisterItem;
 }
 
 class Bbos6GalleryView extends StatefulWidget {
@@ -142,6 +153,160 @@ class Bbos6GalleryView extends StatefulWidget {
 
 class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
   final FocusNode _focusNode = FocusNode(debugLabel: 'BBOS6 timeline gallery');
+  final Map<int, BuildContext> _renderedItems = <int, BuildContext>{};
+  int? _pendingRevealIndex;
+  bool _pendingRevealScheduled = false;
+
+  void _registerItem(int index, BuildContext context) {
+    _renderedItems[index] = context;
+    if (_pendingRevealIndex == index) {
+      _schedulePendingReveal();
+    }
+  }
+
+  void _unregisterItem(int index, BuildContext context) {
+    if (identical(_renderedItems[index], context)) {
+      _renderedItems.remove(index);
+    }
+  }
+
+  void _schedulePendingReveal() {
+    if (_pendingRevealScheduled) {
+      return;
+    }
+    _pendingRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pendingRevealScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      final index = _pendingRevealIndex;
+      if (index != null) {
+        _revealMeasured(index);
+      }
+    });
+    // A scroll animation may have just ended without another frame pending.
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  // Read the actual painted viewport, not the screen height or estimated
+  // sliver/header offsets. A pane beside the grid naturally reduces the
+  // viewport's layout size; pinned headers can obscure its upper edge.
+  double _visibleTop(RenderBox viewport) {
+    var top = 0.0;
+    void inspect(RenderObject object) {
+      object.visitChildren((child) {
+        if (child is! RenderSliver) {
+          return;
+        }
+
+        if (child is RenderSliverPinnedPersistentHeader ||
+            child is RenderSliverFloatingPinnedPersistentHeader) {
+          final geometry = child.geometry;
+          if (geometry != null && geometry.visible && geometry.paintExtent > 0) {
+            final transform = child.getTransformTo(viewport);
+            final headerTop = MatrixUtils.transformPoint(transform, Offset.zero).dy;
+            final headerBottom = MatrixUtils.transformPoint(
+              transform,
+              Offset(0, geometry.paintExtent),
+            ).dy;
+
+            if (headerTop <= top + 1.0 && headerBottom > top) {
+              top = math.min(viewport.size.height, headerBottom);
+            }
+          }
+        }
+        inspect(child);
+      });
+    }
+
+    inspect(viewport);
+    return top;
+  }
+
+  bool _revealMeasured(int index) {
+    final itemContext = _renderedItems[index];
+    final item = itemContext?.findRenderObject();
+    if (item is! RenderBox || !item.attached || !item.hasSize) {
+      return false;
+    }
+
+    final scrollable = Scrollable.maybeOf(itemContext!);
+    final abstractViewport = RenderAbstractViewport.maybeOf(item);
+    // RenderAbstractViewport is an interface, not a RenderBox type. Cast to
+    // the actual box-backed viewport before using its paint geometry.
+    final RenderBox? viewport =
+        abstractViewport is RenderBox ? abstractViewport as RenderBox : null;
+    if (scrollable == null || viewport == null ||
+        !viewport.attached || !viewport.hasSize) {
+      return false;
+    }
+
+    final position = scrollable.position;
+    if (!position.hasPixels || !position.hasViewportDimension ||
+        position.axisDirection != AxisDirection.down) {
+      return false;
+    }
+
+    final bounds = MatrixUtils.transformRect(
+      item.getTransformTo(viewport),
+      Offset.zero & item.size,
+    );
+    final visibleTop = _visibleTop(viewport);
+    final visibleBottom = viewport.size.height;
+    if (visibleBottom <= visibleTop) {
+      return false;
+    }
+
+    // Scrolling is minimal: keep an already-visible item stationary, align
+    // its top against the actual top edge when navigating up, or its bottom
+    // against the actual lower edge when navigating down.
+    final double delta;
+    if (bounds.top < visibleTop - 0.5) {
+      delta = bounds.top - visibleTop;
+    } else if (bounds.bottom > visibleBottom + 0.5) {
+      delta = bounds.bottom - visibleBottom;
+    } else {
+      _pendingRevealIndex = null;
+      return true;
+    }
+
+    final target = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    ).toDouble();
+    if ((target - position.pixels).abs() < 0.5) {
+      _pendingRevealIndex = null;
+      return true;
+    }
+
+    // A collapsing/pinning header can change its painted extent while
+    // scrolling. Re-check once the animation finishes using fresh geometry.
+    unawaited(
+      position.animateTo(
+        target,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      ).then((_) {
+        if (mounted && _pendingRevealIndex == index) {
+          _schedulePendingReveal();
+        }
+      }),
+    );
+    return true;
+  }
+
+  void _revealSelection(int index) {
+    _pendingRevealIndex = index;
+    if (!_revealMeasured(index)) {
+      // The target is not built yet in a lazily materialized sliver. Let
+      // the consumer bring it into the cache, then finish with measured
+      // alignment as soon as Bbos6GalleryItem registers its render box.
+      widget.onReveal(index);
+      _schedulePendingReveal();
+    }
+  }
+
 
   @override
   void initState() {
@@ -160,6 +325,9 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
       sectionItemCounts: widget.sectionItemCounts,
       columns: widget.columnCount,
     );
+    if (_pendingRevealIndex != null && _pendingRevealIndex! >= widget.controller.itemCount) {
+      _pendingRevealIndex = null;
+    }
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
@@ -178,7 +346,7 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
     if (direction != null) {
       final target = widget.controller.move(direction);
       if (target != null) {
-        widget.onReveal(target);
+        _revealSelection(target);
       }
       return KeyEventResult.handled;
     }
@@ -198,6 +366,7 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
 
   @override
   void dispose() {
+    _renderedItems.clear();
     _focusNode.dispose();
     super.dispose();
   }
@@ -207,6 +376,8 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
     return Bbos6GalleryScope(
       controller: widget.controller,
       requestFocus: _focusNode.requestFocus,
+      registerItem: _registerItem,
+      unregisterItem: _unregisterItem,
       child: Focus(
         focusNode: _focusNode,
         autofocus: widget.autofocus,
@@ -218,30 +389,63 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
   }
 }
 
-class Bbos6GalleryItem extends StatelessWidget {
+class Bbos6GalleryItem extends StatefulWidget {
   const Bbos6GalleryItem({required this.index, required this.child, super.key});
 
   final int index;
   final Widget child;
 
   @override
+  State<Bbos6GalleryItem> createState() => _Bbos6GalleryItemState();
+}
+
+class _Bbos6GalleryItemState extends State<Bbos6GalleryItem> {
+  Bbos6GalleryScope? _scope;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextScope = Bbos6GalleryScope.maybeOf(context);
+    if (!identical(_scope, nextScope)) {
+      _scope?.unregisterItem(widget.index, context);
+      _scope = nextScope;
+      _scope?.registerItem(widget.index, context);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant Bbos6GalleryItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      _scope?.unregisterItem(oldWidget.index, context);
+      _scope?.registerItem(widget.index, context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scope?.unregisterItem(widget.index, context);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final scope = Bbos6GalleryScope.maybeOf(context);
+    final scope = _scope;
     if (scope == null) {
-      return child;
+      return widget.child;
     }
 
     final controller = scope.controller;
     return Listener(
       onPointerDown: (_) {
-        controller.select(index);
+        controller.select(widget.index);
         scope.requestFocus();
       },
       child: AnimatedBuilder(
         animation: controller,
-        child: child,
+        child: widget.child,
         builder: (context, child) {
-          final focused = controller.hasFocus && controller.selectedIndex == index;
+          final focused = controller.hasFocus && controller.selectedIndex == widget.index;
           final gradient = Bbos6SelectionGradient.forBrightness(Theme.of(context).brightness);
           return Semantics(
             selected: focused,
