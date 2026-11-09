@@ -17,10 +17,8 @@ import 'package:immich_mobile/widgets/album/remote_album_shared_user_icons.dart'
 
 /// Expanded server-album header height based on rendered details, not a cover photo.
 /// Keeps the pinned actions clear of the metadata and shared-user row.
+// Longer names and descriptions increase the height rather than overflowing.
 @visibleForTesting
-// Reserve only the space used by album details, plus clearance for the
-// pinned toolbar. Longer album names and descriptions increase the height
-// instead of overflowing a one-size-fits-all header.
 double calculateCompactRemoteAlbumHeaderHeight(
   BuildContext context, {
   required String name,
@@ -172,7 +170,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
           });
 
           return FlexibleSpaceBar(
-            background: _ExpandedBackground(scrollProgress: scrollProgress, onEditTitle: widget.onEditTitle),
+            background: _ExpandedBackground(onEditTitle: widget.onEditTitle),
           );
         },
       ),
@@ -181,10 +179,9 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
 }
 
 class _ExpandedBackground extends ConsumerStatefulWidget {
-  final double scrollProgress;
   final void Function()? onEditTitle;
 
-  const _ExpandedBackground({required this.scrollProgress, this.onEditTitle});
+  const _ExpandedBackground({this.onEditTitle});
 
   @override
   ConsumerState<_ExpandedBackground> createState() => _ExpandedBackgroundState();
