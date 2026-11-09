@@ -6,13 +6,11 @@ import 'package:immich_mobile/presentation/widgets/timeline/segment_builder.dart
 class FixedSegmentBuilder extends SegmentBuilder {
   final double tileHeight;
   final int columnCount;
-  final bool omitHeaders;
 
   const FixedSegmentBuilder({
     required super.buckets,
     required this.tileHeight,
     required this.columnCount,
-    this.omitHeaders = false,
     super.spacing,
     super.groupBy,
   });
@@ -28,17 +26,14 @@ class FixedSegmentBuilder extends SegmentBuilder {
       final bucket = buckets[i];
 
       final assetCount = bucket.assetCount;
-      if (omitHeaders && assetCount == 0) {
-        continue;
-      }
       final numberOfRows = (assetCount / columnCount).ceil();
-      final segmentCount = numberOfRows + (omitHeaders ? 0 : 1);
+      final segmentCount = numberOfRows + 1;
 
       final segmentFirstIndex = firstIndex;
       firstIndex += segmentCount;
       final segmentLastIndex = firstIndex - 1;
 
-      final timelineHeader = omitHeaders ? HeaderType.none : switch (groupBy) {
+      final timelineHeader = switch (groupBy) {
         GroupAssetsBy.month => HeaderType.month,
         GroupAssetsBy.day || GroupAssetsBy.auto =>
           bucket is TimeBucket && bucket.date.month != previousDate?.month ? HeaderType.monthAndDay : HeaderType.day,
@@ -47,9 +42,7 @@ class FixedSegmentBuilder extends SegmentBuilder {
       final headerExtent = SegmentBuilder.headerExtent(timelineHeader);
 
       final segmentStartOffset = startOffset;
-      startOffset += omitHeaders
-          ? (tileHeight + spacing) * numberOfRows
-          : headerExtent + (tileHeight * numberOfRows) + spacing * (numberOfRows - 1);
+      startOffset += headerExtent + (tileHeight * numberOfRows) + spacing * (numberOfRows - 1);
       final segmentEndOffset = startOffset;
 
       segments.add(
@@ -65,7 +58,6 @@ class FixedSegmentBuilder extends SegmentBuilder {
           headerExtent: headerExtent,
           spacing: spacing,
           header: timelineHeader,
-          hasHeader: !omitHeaders,
         ),
       );
 
