@@ -59,6 +59,20 @@ void main() {
       expect(find.byType(TimelineHeader), findsOneWidget);
       expect(find.byType(IconButton), findsOneWidget);
       expect(tester.getSize(find.byType(IconButton)).height, greaterThanOrEqualTo(48));
+      if (headerType == HeaderType.monthAndDay) {
+        final labels = find.descendant(of: find.byType(TimelineHeader), matching: find.byType(Text));
+        expect(labels, findsNWidgets(2));
+
+        final month = labels.at(0);
+        final day = labels.at(1);
+        final gap = tester.getTopLeft(day).dy - tester.getBottomLeft(month).dy;
+        expect(gap, closeTo(2.0, 0.25), reason: 'Month and date labels must have only a 2dp visual gap');
+        expect(tester.getSize(find.byType(TimelineHeader)).height, 72.0);
+
+        final checkboxCenter = tester.getCenter(find.byType(IconButton)).dy;
+        final dateCenter = tester.getCenter(day).dy;
+        expect((checkboxCenter - dateCenter).abs(), lessThan(16.0));
+      }
     }
   });
 }
