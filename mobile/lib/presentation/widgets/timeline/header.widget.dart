@@ -9,6 +9,7 @@ import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
@@ -52,12 +53,16 @@ class TimelineHeader extends HookWidget {
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
 
+    Widget dateRow(Widget child) => compact
+        ? SizedBox(height: kBbos6TimelineDateRowHeight, child: child)
+        : child;
+
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: compact ? MainAxisAlignment.spaceBetween : MainAxisAlignment.spaceEvenly,
       children: [
         if (isMonthHeader)
-          Row(
+          dateRow(Row(
             children: [
               Text(
                 toBeginningOfSentenceCase(_formatMonth(date)),
@@ -66,9 +71,9 @@ class TimelineHeader extends HookWidget {
               const Spacer(),
               if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
             ],
-          ),
+          )),
         if (isDayHeader)
-          Row(
+          dateRow(Row(
             children: [
               Text(
                 toBeginningOfSentenceCase(_formatDay(date)),
@@ -77,11 +82,15 @@ class TimelineHeader extends HookWidget {
               const Spacer(),
               _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
             ],
-          ),
+          )),
       ],
     );
 
-    final padding = EdgeInsets.only(top: isMonthHeader ? (compact ? 4.0 : 8.0) : 0.0, left: 12.0, right: 12.0);
+    final padding = EdgeInsets.only(
+      top: isMonthHeader ? (compact ? kBbos6TimelineDateTopPadding : 8.0) : 0.0,
+      left: 12.0,
+      right: 12.0,
+    );
 
     // The compact header's padding must fit *inside* its reported extent so
     // virtualized row offsets remain aligned with the rendered date header.
