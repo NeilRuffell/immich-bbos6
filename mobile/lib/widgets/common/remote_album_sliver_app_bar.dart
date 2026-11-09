@@ -15,6 +15,54 @@ import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/album/remote_album_shared_user_icons.dart';
 
+/// Expanded server-album header height based on rendered details, not a cover photo.
+/// Keeps the pinned actions clear of the metadata and shared-user row.
+@visibleForTesting
+// Reserve only the space used by album details, plus clearance for the
+// pinned toolbar. Longer album names and descriptions increase the height
+// instead of overflowing a one-size-fits-all header.
+double calculateCompactRemoteAlbumHeaderHeight(
+  BuildContext context, {
+  required String name,
+  required String description,
+  required bool isShared,
+}) {
+  final maxWidth = math.max(1.0, MediaQuery.sizeOf(context).width - 32.0);
+  final textScaler = MediaQuery.textScalerOf(context);
+  final direction = Directionality.of(context);
+  final titlePainter = TextPainter(
+    text: TextSpan(text: name, style: _CompactAlbumTitle.style),
+    textScaler: textScaler,
+    textDirection: direction,
+    maxLines: 3,
+  )..layout(maxWidth: maxWidth);
+  final titleHeight = titlePainter.height;
+  titlePainter.dispose();
+
+  var descriptionHeight = 0.0;
+  if (description.isNotEmpty) {
+    final descriptionPainter = TextPainter(
+      text: TextSpan(text: description, style: _ExpandedBackgroundState.descriptionStyle),
+      textScaler: textScaler,
+      textDirection: direction,
+      maxLines: 2,
+    )..layout(maxWidth: maxWidth);
+    descriptionHeight = math.min(44.0, descriptionPainter.height) + 4.0;
+    descriptionPainter.dispose();
+  }
+
+  // The existing shared-user widget occupies 50dp when the album is shared.
+  const toolbarClearance = kToolbarHeight + 30.0;
+  const metadataHeight = 24.0;
+  const bottomPadding = 12.0;
+  final usersHeight = isShared ? 54.0 : 0.0;
+  return math.max(
+    180.0,
+    toolbarClearance + metadataHeight + titleHeight + descriptionHeight + usersHeight + bottomPadding,
+  );
+}
+
+
 class RemoteAlbumSliverAppBar extends ConsumerStatefulWidget {
   const RemoteAlbumSliverAppBar({super.key, required this.kebabMenu, this.onEditTitle, this.onActivity});
 
@@ -28,45 +76,6 @@ class RemoteAlbumSliverAppBar extends ConsumerStatefulWidget {
 
 class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBar> {
   double _scrollProgress = 0.0;
-
-  // Reserve only the space used by album details, plus clearance for the
-  // pinned toolbar. Longer album names and descriptions increase the height
-  // instead of overflowing a one-size-fits-all header.
-  double _expandedHeight(BuildContext context, String name, String description, bool isShared) {
-    final maxWidth = math.max(1.0, MediaQuery.sizeOf(context).width - 32.0);
-    final textScaler = MediaQuery.textScalerOf(context);
-    final direction = Directionality.of(context);
-    final titlePainter = TextPainter(
-      text: TextSpan(text: name, style: _CompactAlbumTitle.style),
-      textScaler: textScaler,
-      textDirection: direction,
-      maxLines: 3,
-    )..layout(maxWidth: maxWidth);
-    final titleHeight = titlePainter.height;
-    titlePainter.dispose();
-
-    var descriptionHeight = 0.0;
-    if (description.isNotEmpty) {
-      final descriptionPainter = TextPainter(
-        text: TextSpan(text: description, style: _ExpandedBackgroundState.descriptionStyle),
-        textScaler: textScaler,
-        textDirection: direction,
-        maxLines: 2,
-      )..layout(maxWidth: maxWidth);
-      descriptionHeight = math.min(44.0, descriptionPainter.height) + 4.0;
-      descriptionPainter.dispose();
-    }
-
-    // The existing shared-user widget occupies 50dp when the album is shared.
-    const toolbarClearance = kToolbarHeight + 30.0;
-    const metadataHeight = 24.0;
-    const bottomPadding = 12.0;
-    final usersHeight = isShared ? 54.0 : 0.0;
-    return math.max(
-      180.0,
-      toolbarClearance + metadataHeight + titleHeight + descriptionHeight + usersHeight + bottomPadding,
-    );
-  }
 
   double _calculateScrollProgress(FlexibleSpaceBarSettings? settings) {
     if (settings?.maxExtent == null || settings?.minExtent == null) {
@@ -100,7 +109,12 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
     ];
 
     return SliverAppBar(
-      expandedHeight: _expandedHeight(context, currentAlbum.name, currentAlbum.description, currentAlbum.isShared),
+      expandedHeight: calculateCompactRemoteAlbumHeaderHeight(
+        context,
+        name: currentAlbum.name,
+        description: currentAlbum.description,
+        isShared: currentAlbum.isShared,
+      ),
       floating: false,
       pinned: true,
       snap: false,
