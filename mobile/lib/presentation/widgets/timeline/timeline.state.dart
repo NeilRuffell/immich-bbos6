@@ -21,7 +21,6 @@ abstract class TimelineArgs with _$TimelineArgs {
     @Default(kTimelineColumnCount) int columnCount,
     @Default(false) bool showStorageIndicator,
     @Default(false) bool withStack,
-    @Default(false) bool omitHeaders,
     GroupAssetsBy? groupBy,
   }) = _TimelineArgs;
 }
@@ -70,8 +69,8 @@ class TimelineStateNotifier extends Notifier<TimelineState> {
 // It should be used only after the timeline service and timeline args provider is overridden
 final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) async* {
   // maxHeight is left out on purpose, a height-only change must not restart the bucket stream
-  final (maxWidth, columnCount, spacing, groupByArg, omitHeaders) = ref.watch(
-    timelineArgsProvider.select((args) => (args.maxWidth, args.columnCount, args.spacing, args.groupBy, args.omitHeaders)),
+  final (maxWidth, columnCount, spacing, groupByArg) = ref.watch(
+    timelineArgsProvider.select((args) => (args.maxWidth, args.columnCount, args.spacing, args.groupBy)),
   );
   final availableTileWidth = maxWidth - (spacing * (columnCount - 1));
   final tileExtent = math.max(0, availableTileWidth) / columnCount;
@@ -86,7 +85,6 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
       columnCount: columnCount,
       spacing: spacing,
       groupBy: groupBy!,
-      omitHeaders: omitHeaders,
     ).generate();
   });
 }, dependencies: [timelineServiceProvider, timelineArgsProvider]);
