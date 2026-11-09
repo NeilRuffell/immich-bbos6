@@ -221,6 +221,51 @@ void main() {
     expect(itemRect.top, closeTo(toolbarBottom, 1.0));
   });
 
+  testWidgets('Bbos6GalleryGrid shares focus, activation and pane edge reveal', (tester) async {
+    final opened = <int>[];
+    tester.view.physicalSize = const Size(360, 460);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              const SizedBox(height: 50, child: Text('Top pane')),
+              Expanded(
+                child: Bbos6GalleryGrid(
+                  itemCount: 20,
+                  columns: 2,
+                  childAspectRatio: 1.0,
+                  onActivate: opened.add,
+                  itemBuilder: (context, index) => Center(
+                    key: ValueKey('grid-photo-$index'),
+                    child: Text('Photo $index'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 70, child: Text('Bottom pane')),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    for (var i = 0; i < 2; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    final gridBottom = tester.getRect(find.byType(GridView)).bottom;
+    final focused = tester.getRect(find.byKey(const ValueKey('grid-photo-4')));
+    expect(focused.bottom, closeTo(gridBottom, 1.0));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(opened, [4]);
+  });
+
   testWidgets('unbuilt targets still use the consumer reveal callback', (tester) async {
     final controller = Bbos6GridNavigationController();
     addTearDown(controller.dispose);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
@@ -43,20 +44,21 @@ class _MemoryListPageState extends ConsumerState<MemoryListPage> {
           body: SafeArea(
             child: memories.widgetWhen(
               onData: (memories) {
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: constraints.maxWidth > 600 ? 4 : 2,
-                    childAspectRatio: 0.5625,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                  ),
+                void openMemory(int index) {
+                  MemoryPage.setMemory(ref, memories[index]);
+                  unawaited(context.pushRoute(MemoryRoute(memories: memories, memoryIndex: index)));
+                }
+
+                return Bbos6GalleryGrid(
+                  columns: constraints.maxWidth > 600 ? 4 : 2,
+                  childAspectRatio: 0.5625,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
                   padding: const EdgeInsets.all(16),
                   itemCount: memories.length,
+                  onActivate: openMemory,
                   itemBuilder: (context, index) => GestureDetector(
-                    onTap: () {
-                      MemoryPage.setMemory(ref, memories[index]);
-                      unawaited(context.pushRoute(MemoryRoute(memories: memories, memoryIndex: index)));
-                    },
+                    onTap: () => openMemory(index),
                     child: Stack(
                       children: [
                         ClipRRect(
