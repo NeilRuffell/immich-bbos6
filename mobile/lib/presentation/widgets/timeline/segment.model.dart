@@ -26,6 +26,7 @@ abstract class Segment {
   final double gridOffset;
   // The type of the header
   final HeaderType header;
+  final bool hasHeader;
 
   const Segment({
     required this.firstIndex,
@@ -37,8 +38,9 @@ abstract class Segment {
     required this.headerExtent,
     required this.spacing,
     required this.header,
-  }) : gridIndex = firstIndex + 1,
-       gridOffset = startOffset + headerExtent + spacing;
+    this.hasHeader = true,
+  }) : gridIndex = firstIndex + (hasHeader ? 1 : 0),
+       gridOffset = startOffset + headerExtent + (hasHeader ? spacing : 0);
 
   bool containsIndex(int index) => firstIndex <= index && index <= lastIndex;
 
@@ -66,7 +68,8 @@ abstract class Segment {
         other.headerExtent == headerExtent &&
         other.gridIndex == gridIndex &&
         other.gridOffset == gridOffset &&
-        other.header == header;
+        other.header == header &&
+        other.hasHeader == hasHeader;
   }
 
   @override
@@ -80,7 +83,8 @@ abstract class Segment {
       firstAssetIndex.hashCode ^
       gridIndex.hashCode ^
       gridOffset.hashCode ^
-      header.hashCode;
+      header.hashCode ^
+      hasHeader.hashCode;
 
   @override
   String toString() {
