@@ -5,6 +5,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -226,45 +227,49 @@ class _DeferredRowLoaderState extends ConsumerState<_DeferredRowLoader> {
   }
 }
 
+Future<void> activateTimelineAsset(
+  BuildContext context,
+  WidgetRef ref,
+  int assetIndex,
+  BaseAsset asset,
+  Size remoteSize,
+) async {
+  final selection = ref.read(multiSelectProvider);
+  if (selection.lockedSelectionAssets.any((locked) => locked == asset)) {
+    return;
+  }
+
+  if (selection.forceEnable || selection.isEnabled) {
+    ref.read(multiSelectProvider.notifier).toggleAssetSelection(asset);
+    return;
+  }
+
+  final heroOffset = TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
+  await ref.read(timelineServiceProvider).loadAssets(assetIndex, 1);
+  if (!context.mounted) {
+    return;
+  }
+
+  ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+  AssetViewer.setAsset(ref, asset, thumbnailSize: remoteSize);
+  unawaited(
+    context.pushRoute(
+      AssetViewerRoute(
+        initialIndex: assetIndex,
+        timelineService: ref.read(timelineServiceProvider),
+        heroOffset: heroOffset,
+        currentAlbum: ref.read(currentRemoteAlbumProvider),
+      ),
+    ),
+  );
+}
+
 class _AssetTileWidget extends ConsumerWidget {
   final BaseAsset asset;
   final int assetIndex;
   final Size size;
 
   const _AssetTileWidget({super.key, required this.asset, required this.assetIndex, required this.size});
-
-  Future _handleOnTap(
-    BuildContext ctx,
-    WidgetRef ref,
-    int assetIndex,
-    BaseAsset asset,
-    int? heroOffset,
-    Size remoteSize,
-  ) async {
-    final multiSelectState = ref.read(multiSelectProvider);
-
-    if (multiSelectState.forceEnable || multiSelectState.isEnabled) {
-      ref.read(multiSelectProvider.notifier).toggleAssetSelection(asset);
-    } else {
-      await ref.read(timelineServiceProvider).loadAssets(assetIndex, 1);
-      if (!ctx.mounted) {
-        return;
-      }
-
-      ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
-      AssetViewer.setAsset(ref, asset, thumbnailSize: remoteSize);
-      unawaited(
-        ctx.pushRoute(
-          AssetViewerRoute(
-            initialIndex: assetIndex,
-            timelineService: ref.read(timelineServiceProvider),
-            heroOffset: heroOffset,
-            currentAlbum: ref.read(currentRemoteAlbumProvider),
-          ),
-        ),
-      );
-    }
-  }
 
   void _handleOnLongPress(WidgetRef ref, BaseAsset asset) {
     final multiSelectState = ref.read(multiSelectProvider);
@@ -301,17 +306,24 @@ class _AssetTileWidget extends ConsumerWidget {
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
     final showStackIndicator = ref.watch(timelineServiceProvider).origin != TimelineOrigin.trash;
 
-    return RepaintBoundary(
-      child: GestureDetector(
-        onTap: () => lockSelection ? null : _handleOnTap(context, ref, assetIndex, asset, heroOffset, remoteSize),
-        onLongPress: () => lockSelection || isReadonlyModeEnabled ? null : _handleOnLongPress(ref, asset),
-        child: ThumbnailTile(
-          asset,
-          remoteSize: remoteSize,
-          lockSelection: lockSelection,
-          showStorageIndicator: showStorageIndicator,
-          showStackIndicator: showStackIndicator,
-          heroOffset: heroOffset,
+    return Bbos6GalleryItem(
+      index: assetIndex,
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () {
+            if (!lockSelection) {
+              unawaited(activateTimelineAsset(context, ref, assetIndex, asset, remoteSize));
+            }
+          },
+          onLongPress: () => lockSelection || isReadonlyModeEnabled ? null : _handleOnLongPress(ref, asset),
+          child: ThumbnailTile(
+            asset,
+            remoteSize: remoteSize,
+            lockSelection: lockSelection,
+            showStorageIndicator: showStorageIndicator,
+            showStackIndicator: showStackIndicator,
+            heroOffset: heroOffset,
+          ),
         ),
       ),
     );
