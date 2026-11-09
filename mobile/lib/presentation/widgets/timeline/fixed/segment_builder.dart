@@ -6,11 +6,13 @@ import 'package:immich_mobile/presentation/widgets/timeline/segment_builder.dart
 class FixedSegmentBuilder extends SegmentBuilder {
   final double tileHeight;
   final int columnCount;
+  final bool compactDateHeaders;
 
   const FixedSegmentBuilder({
     required super.buckets,
     required this.tileHeight,
     required this.columnCount,
+    this.compactDateHeaders = false,
     super.spacing,
     super.groupBy,
   });
@@ -39,7 +41,7 @@ class FixedSegmentBuilder extends SegmentBuilder {
           bucket is TimeBucket && bucket.date.month != previousDate?.month ? HeaderType.monthAndDay : HeaderType.day,
         GroupAssetsBy.none => HeaderType.none,
       };
-      final headerExtent = SegmentBuilder.headerExtent(timelineHeader);
+      final headerExtent = SegmentBuilder.headerExtent(timelineHeader, compact: compactDateHeaders);
 
       final segmentStartOffset = startOffset;
       startOffset += headerExtent + (tileHeight * numberOfRows) + spacing * (numberOfRows - 1);
@@ -58,6 +60,7 @@ class FixedSegmentBuilder extends SegmentBuilder {
           headerExtent: headerExtent,
           spacing: spacing,
           header: timelineHeader,
+          compactDateHeaders: compactDateHeaders,
         ),
       );
 
