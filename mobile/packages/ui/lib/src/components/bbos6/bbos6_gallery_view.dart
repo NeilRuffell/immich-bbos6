@@ -389,6 +389,111 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
   }
 }
 
+/// A ready-to-use BBOS6 image grid for screens without a Timeline/sliver
+/// adapter. All focus, directional navigation and viewport reveal behavior is
+/// delegated to [Bbos6GalleryView]; consumers supply only their existing tile
+/// widgets and activation callback.
+class Bbos6GalleryGrid extends StatefulWidget {
+  const Bbos6GalleryGrid({
+    required this.itemCount,
+    required this.columns,
+    required this.itemBuilder,
+    required this.onActivate,
+    this.padding = EdgeInsets.zero,
+    this.childAspectRatio = 1.0,
+    this.mainAxisSpacing = 0.0,
+    this.crossAxisSpacing = 0.0,
+    this.autofocus = true,
+    super.key,
+  }) : assert(columns > 0),
+       assert(childAspectRatio > 0);
+
+  final int itemCount;
+  final int columns;
+  final IndexedWidgetBuilder itemBuilder;
+  final ValueChanged<int> onActivate;
+  final EdgeInsets padding;
+  final double childAspectRatio;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  final bool autofocus;
+
+  @override
+  State<Bbos6GalleryGrid> createState() => _Bbos6GalleryGridState();
+}
+
+class _Bbos6GalleryGridState extends State<Bbos6GalleryGrid> {
+  final Bbos6GridNavigationController _navigation = Bbos6GridNavigationController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _navigation.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileWidth = math.max(
+          0.0,
+          constraints.maxWidth - widget.padding.horizontal -
+              widget.crossAxisSpacing * (widget.columns - 1),
+        ) / widget.columns;
+        final tileHeight = tileWidth / widget.childAspectRatio;
+        final rowStride = tileHeight + widget.mainAxisSpacing;
+
+        void revealUnbuilt(int index) {
+          if (!_scrollController.hasClients) {
+            return;
+          }
+          final position = _scrollController.position;
+          final rowTop = widget.padding.top + (index ~/ widget.columns) * rowStride;
+          final rowBottom = rowTop + tileHeight;
+          final target = rowTop < position.pixels
+              ? rowTop
+              : rowBottom > position.pixels + position.viewportDimension
+                  ? rowBottom - position.viewportDimension
+                  : position.pixels;
+          if ((target - position.pixels).abs() >= 0.5) {
+            // Position the lazily built target inside the cache. The shared
+            // gallery then performs final measured edge alignment.
+            _scrollController.jumpTo(
+              target.clamp(position.minScrollExtent, position.maxScrollExtent).toDouble(),
+            );
+          }
+        }
+
+        return Bbos6GalleryView(
+          controller: _navigation,
+          sectionItemCounts: [widget.itemCount],
+          columnCount: widget.columns,
+          onReveal: revealUnbuilt,
+          onActivate: widget.onActivate,
+          autofocus: widget.autofocus,
+          child: GridView.builder(
+            controller: _scrollController,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: widget.columns,
+              childAspectRatio: widget.childAspectRatio,
+              mainAxisSpacing: widget.mainAxisSpacing,
+              crossAxisSpacing: widget.crossAxisSpacing,
+            ),
+            padding: widget.padding,
+            itemCount: widget.itemCount,
+            itemBuilder: (context, index) => Bbos6GalleryItem(
+              index: index,
+              child: widget.itemBuilder(context, index),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class Bbos6GalleryItem extends StatefulWidget {
   const Bbos6GalleryItem({required this.index, required this.child, super.key});
 
