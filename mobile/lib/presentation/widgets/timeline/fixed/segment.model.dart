@@ -28,6 +28,7 @@ import 'package:immich_mobile/routing/router.dart';
 class FixedSegment extends Segment {
   final double tileHeight;
   final int columnCount;
+  final bool compactDateHeaders;
   final double mainAxisExtend;
 
   const FixedSegment({
@@ -39,6 +40,7 @@ class FixedSegment extends Segment {
     required super.bucket,
     required this.tileHeight,
     required this.columnCount,
+    this.compactDateHeaders = false,
     required super.headerExtent,
     required super.spacing,
     required super.header,
@@ -77,7 +79,13 @@ class FixedSegment extends Segment {
     final numberOfAssets = math.min(columnCount, assetCount - assetIndex);
 
     if (index == firstIndex) {
-      return TimelineHeader(bucket: bucket, header: header, height: headerExtent, assetOffset: firstAssetIndex);
+      return TimelineHeader(
+        bucket: bucket,
+        header: header,
+        height: headerExtent,
+        assetOffset: firstAssetIndex,
+        compact: compactDateHeaders,
+      );
     }
 
     return _FixedSegmentRow(
