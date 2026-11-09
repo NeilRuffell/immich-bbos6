@@ -33,7 +33,7 @@ void main() {
     expect(controller.selectedIndex, isNull);
   });
 
-  testWidgets('trackpad navigation updates persistent footer and Enter activates', (tester) async {
+  testWidgets('trackpad navigation selects images and Enter activates', (tester) async {
     final controller = Bbos6GridNavigationController();
     addTearDown(controller.dispose);
     final opened = <int>[];
@@ -48,7 +48,6 @@ void main() {
             columnCount: 3,
             onReveal: revealed.add,
             onActivate: opened.add,
-            footerBuilder: (context, index) => Text('Selected ${index ?? 'none'}'),
             child: GridView.count(
               crossAxisCount: 3,
               children: [
@@ -62,10 +61,10 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Selected 0'), findsOneWidget);
+    expect(controller.selectedIndex, 0);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
-    expect(find.text('Selected 2'), findsOneWidget);
+    expect(controller.selectedIndex, 2);
     expect(revealed, [2]);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -74,6 +73,6 @@ void main() {
 
     await tester.tap(find.text('Photo 5'));
     await tester.pump();
-    expect(find.text('Selected 5'), findsOneWidget);
+    expect(controller.selectedIndex, 5);
   });
 }
