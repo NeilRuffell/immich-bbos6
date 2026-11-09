@@ -58,7 +58,7 @@ class FixedSegment extends Segment {
     if (!adjustedOffset.isFinite || adjustedOffset < 0) {
       return firstIndex;
     }
-    return gridIndex + (adjustedOffset / mainAxisExtend).floor();
+    return math.min(lastIndex, gridIndex + (adjustedOffset / mainAxisExtend).floor());
   }
 
   @override
@@ -67,7 +67,7 @@ class FixedSegment extends Segment {
     if (!adjustedOffset.isFinite || adjustedOffset < 0) {
       return firstIndex;
     }
-    return math.max(firstIndex, gridIndex + (adjustedOffset / mainAxisExtend).ceil() - 1);
+    return math.min(lastIndex, math.max(firstIndex, gridIndex + (adjustedOffset / mainAxisExtend).ceil() - 1));
   }
 
   @override
