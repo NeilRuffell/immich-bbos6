@@ -2,7 +2,7 @@
 
 ## Scope
 
-The Pictures Library is the first consumer of `Bbos6GalleryView`, enabled by
+Pictures Library and opened server albums use `Bbos6GalleryView`, enabled by
 `Timeline(bbosGallery: true)`. Other timelines retain stock behavior unless they
 explicitly opt into this shared presentation component.
 
@@ -38,6 +38,21 @@ gestures.
 
 There is no persistent bottom date/time bar. Original in-grid date rows
 identify date groups; the stock Immich date scroller remains in use.
+
+## Opened server albums
+
+`RemoteAlbumPage` opts into the same shared gallery via
+`Timeline(bbosGallery: true)`. Its existing `timelineFactoryProvider.remoteAlbum`
+asset source, `RemoteAlbumSliverAppBar`, pending uploads banner, album
+permissions and actions, selection flow, viewer, and
+`RemoteAlbumBottomSheet` remain unchanged. BBOS6 navigation, thumbnail
+highlighting, and compact date-row layout are inherited from the shared
+timeline/gallery components rather than reimplemented in this page.
+Local album galleries and all other Timeline consumers remain unchanged.
+
+Because the server-album page contains a dynamic app bar and an upload banner,
+Q25 verification should include focus scrolling at both edges of the image
+viewport, Enter and Back, and navigation when a pending-upload banner is visible.
 
 ### Compact BBOS6 date rows
 
