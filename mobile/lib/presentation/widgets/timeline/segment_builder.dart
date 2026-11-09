@@ -16,9 +16,9 @@ abstract class SegmentBuilder {
   static double headerExtent(HeaderType header, {bool compact = false}) {
     if (compact) {
       return switch (header) {
-        HeaderType.month => 52.0,
-        HeaderType.day => 52.0,
-        HeaderType.monthAndDay => 88.0,
+        HeaderType.month => kBbos6TimelineSingleDateHeaderHeight,
+        HeaderType.day => kBbos6TimelineSingleDateHeaderHeight,
+        HeaderType.monthAndDay => kBbos6TimelineCombinedDateHeaderHeight,
         HeaderType.none => 0.0,
       };
     }
