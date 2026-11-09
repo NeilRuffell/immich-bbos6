@@ -39,6 +39,25 @@ gestures.
 There is no persistent bottom date/time bar. Original in-grid date rows
 identify date groups; the stock Immich date scroller remains in use.
 
+### Compact BBOS6 date rows
+
+The shared gallery uses the presentation-only `compactTimelineDateHeadersProvider`
+to request compact date-row extents from `FixedSegmentBuilder` and
+`TimelineHeader`. The shared header layout remains responsible for the
+date text and existing date-group selection control.
+
+| Header | Stock height | BBOS6 gallery height |
+| --- | ---: | ---: |
+| Day | 72dp | 52dp |
+| Month | 80dp | 52dp |
+| Month and day | 128dp | 88dp |
+
+The compact header keeps its vertical padding inside the reported extent.
+Its segment scroll offsets account for the gap before the first thumbnail,
+preventing accumulated blank space or overlapping date rows. Other timeline
+consumers retain stock heights and appearance. Do not change the underlying
+bucket grouping, image source, date scrubber, or selection callbacks.
+
 ## Verification
 
 - Run `mise //mobile:checkout` after switching to the feature branch.
@@ -48,6 +67,8 @@ identify date groups; the stock Immich date scroller remains in use.
   focus highlight, all four directions, navigation across date boundaries,
   scroll-to-focus at both viewport edges, Enter, Back from viewer,
   touchscreen tap and long-press, and selection mode.
+- Verify compact date labels and checkboxes are not clipped, and focus
+  scrolling and the scrubber align correctly after crossing month/day headers.
 - Verify the image grid extends to its normal bottom edge without a
   persistent date/time footer.
 - Verify stock date scroller behavior and other Timeline consumers.
