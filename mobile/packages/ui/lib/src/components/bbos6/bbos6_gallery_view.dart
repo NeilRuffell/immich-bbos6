@@ -185,6 +185,8 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
         _revealMeasured(index);
       }
     });
+    // A scroll animation may have just ended without another frame pending.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   // Read the actual painted viewport, not the screen height or estimated
@@ -319,6 +321,9 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
       sectionItemCounts: widget.sectionItemCounts,
       columns: widget.columnCount,
     );
+    if (_pendingRevealIndex != null && _pendingRevealIndex! >= widget.controller.itemCount) {
+      _pendingRevealIndex = null;
+    }
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
