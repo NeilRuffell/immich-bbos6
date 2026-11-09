@@ -33,7 +33,7 @@ class Bbos6GridNavigationController extends ChangeNotifier {
     }
 
     _itemCount = index;
-    final next = index == 0 ? null : (_selectedIndex ?? 0).clamp(0, index - 1);
+    final next = index == 0 ? null : (_selectedIndex ?? 0).clamp(0, index - 1).toInt();
     if (next != _selectedIndex) {
       _selectedIndex = next;
       notifyListeners();
@@ -66,10 +66,10 @@ class Bbos6GridNavigationController extends ChangeNotifier {
       Bbos6GalleryDirection.left => current > 0 ? current - 1 : current,
       Bbos6GalleryDirection.right => current + 1 < _itemCount ? current + 1 : current,
       Bbos6GalleryDirection.up => row > 0
-          ? _rowStarts[row - 1] + column.clamp(0, _rowLengths[row - 1] - 1)
+          ? _rowStarts[row - 1] + column.clamp(0, _rowLengths[row - 1] - 1).toInt()
           : current,
       Bbos6GalleryDirection.down => row + 1 < _rowStarts.length
-          ? _rowStarts[row + 1] + column.clamp(0, _rowLengths[row + 1] - 1)
+          ? _rowStarts[row + 1] + column.clamp(0, _rowLengths[row + 1] - 1).toInt()
           : current,
     };
     if (target == current) {
