@@ -267,10 +267,7 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
                 ),
                 GestureDetector(
                   onTap: widget.onEditTitle,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) =>
-                        _CompactAlbumTitle(text: currentAlbum.name, maxWidth: constraints.maxWidth),
-                  ),
+                  child: _CompactAlbumTitle(text: currentAlbum.name),
                 ),
                 if (currentAlbum.description.isNotEmpty)
                   GestureDetector(
@@ -297,9 +294,8 @@ class _ExpandedBackgroundState extends ConsumerState<_ExpandedBackground> with S
 
 class _CompactAlbumTitle extends StatelessWidget {
   final String text;
-  final double maxWidth;
 
-  const _CompactAlbumTitle({required this.text, required this.maxWidth});
+  const _CompactAlbumTitle({required this.text});
 
   static const style = TextStyle(
     color: Colors.white,
