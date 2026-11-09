@@ -232,8 +232,12 @@ class _Bbos6GalleryViewState extends State<Bbos6GalleryView> {
     }
 
     final scrollable = Scrollable.maybeOf(itemContext!);
-    final viewport = RenderAbstractViewport.maybeOf(item);
-    if (scrollable == null || viewport is! RenderBox ||
+    final abstractViewport = RenderAbstractViewport.maybeOf(item);
+    // RenderAbstractViewport is an interface, not a RenderBox type. Cast to
+    // the actual box-backed viewport before using its paint geometry.
+    final RenderBox? viewport =
+        abstractViewport is RenderBox ? abstractViewport as RenderBox : null;
+    if (scrollable == null || viewport == null ||
         !viewport.attached || !viewport.hasSize) {
       return false;
     }
