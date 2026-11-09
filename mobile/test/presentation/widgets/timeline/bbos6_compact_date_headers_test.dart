@@ -20,14 +20,14 @@ void main() {
 
     expect(segments.length, 2);
     expect(segments.first.header, HeaderType.monthAndDay);
-    expect(segments.first.headerExtent, 88);
-    expect(segments.first.gridOffset, 90);
-    expect(segments.first.endOffset, 190);
+    expect(segments.first.headerExtent, 104);
+    expect(segments.first.gridOffset, 106);
+    expect(segments.first.endOffset, 206);
     expect(segments.last.header, HeaderType.day);
     expect(segments.last.headerExtent, 52);
-    expect(segments.last.startOffset, 190);
-    expect(segments.last.gridOffset, 244);
-    expect(segments.last.endOffset, 446);
+    expect(segments.last.startOffset, 206);
+    expect(segments.last.gridOffset, 260);
+    expect(segments.last.endOffset, 462);
     expect(segments.last.firstAssetIndex, 2);
   });
 
@@ -65,7 +65,7 @@ void main() {
             final dateHeader = header as TimelineHeader;
             expect(dateHeader.compact, isTrue);
             expect(dateHeader.header, HeaderType.monthAndDay);
-            expect(dateHeader.height, 88);
+            expect(dateHeader.height, 104);
             return const SizedBox.shrink();
           },
         ),
